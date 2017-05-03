@@ -3,10 +3,30 @@
 ;; Basic Definitions
 ;; =====================
 
+
+
+(defparameter *files*
+    (list "basic-defns"
+	  "play-scr"))
+
+;; CL
+;; ----------------------
+;; Compiles and Loads all files
+
+(defun cl ()
+  (dolist (file *files*)
+    (compile-file file)
+    (load file)))
+
+;; DEFINE-CONSTANTS
+;; ---------------------
+
 (defconstant *open* '--)
 (defconstant *ply0* 0)
 (defconstant *ply1* 1)
 (defconstant *blank* '-)
+
+(defconstant *num-tiles-left* 100)
 
 (defconstant *dl* 0)
 (defconstant *dw* 0)
@@ -17,6 +37,7 @@
 (defconstant *letters-array* 
     (make-array 27 :initial-contents
 		'(- A B C D E F G H I J K L M N O P Q R S T U V W X Y Z)))
+
 (defconstant *initial-tiles-left* 
     (make-array 27 :initial-contents 
 		;;- A B C D E  F G H I J K L M N O P Q R S T U V W X Y Z
@@ -59,7 +80,9 @@
   ;; BAG: tiles left a 27 vector of integers
   bag
   ;; LETTER-VAL: a 27 vector of integers
-  (letter-val *letter-val-array*)
+  (point-values *letter-val-array*)
+  ;; NUM-TILES-LEFT: integer
+  num-tiles-left
   ;; SCORE: a 2 vector of integers
   score)
 
@@ -96,6 +119,7 @@
 		 :whose-turn (scrabble-whose-turn game)
 		 :rack (copy-array (scrabble-rack game))
 		 :bag (copy-array (scrabble-tiles-left game))
+		 :num-tiles-left (scrabble-tiles-left game)
 		 :point-values (copy-array (scrabble-point-values game))
 		 :score (copy-array (scrabble-score game))))
 
@@ -113,6 +137,10 @@
 	 (score (scrabble-score game))
 	 (bag (scrabble-bag game)))
     
+    ;; Print Title
+    (format str "~%                   Scrabble~%~%")
+    
+    
     ;; Print Board
     (dotimes (i 15)
       (dotimes (j 15)
@@ -123,14 +151,14 @@
     (format str "~% ~%")
     
     ;; Print Player 1 and Player 2 Rack
-    (format str "     Player 1              Player 2    ~%")
+    (format str "Player 1                        Player 2    ~%")
     (let ((letter 0))
       (dotimes (i 7)
 	(if (equal *ply0* p)
 	    (setf letter (aref rack p i))
 	  (setf letter *blank*))
-	(format str " ~A" letter))
-      (format str "      ")
+	(format str "~A " letter))
+      (format str "                ")
       (dotimes (i 7)
 	(if (equal *ply1* p)
 	    (setf letter (aref rack p i))
@@ -169,34 +197,66 @@
 	       :board *initial-board*
 	       :whose-turn *ply0*
 	       :bag *initial-tiles-left*
-	       :rack (random-racks *initial-tiles-left*)
+	       :num-tiles-left *num-tiles-left*
+	       :rack (random-racks *initial-tiles-left* *num-tiles-left*)
 	       :score (make-array 2 :initial-element 0))))
     game))
 
+
+;; NTH-ELT-INDEX-ACC
+;; -----------------
+;; INPUT: ARR, an array of integers 
+;;        N, non-negative integer
+;;        I, current index
+;;        ACC, accumulator 
+;; OUTPUT: An index of where the nth element is
+
+(defun nth-elt-index-acc (arr n i acc)
+  (cond
+   ;; BASE CASE 1: N = 0
+   ((= n 0)
+    i)
+   ;; BASE CASE 2: ACC = 0
+   ((<= acc 0)
+    (decf i))
+   ;; RECURSIVE CASE: ACC < N
+   (T
+    (nth-elt-index-acc arr n (incf i) (- acc (svref arr (- i 1)))))))
+
+;; NTH-ELT-INDEX
+;; -----------------
+;; INPUT: ARR, N
+;; OUTPUT: An index where nth element is in array 
+;; (wrapper function for NTH-ELT-INDEX)
+
+(defun nth-elt-index (arr n)
+  (nth-elt-index-acc arr n 0 n))
+
+
+
 ;; RANDOM-TILE
 ;; -----------------
-;; INPUT: BAG, a bag of scrabble tiles
+;; INPUT: BAG, an of integers, N, num tiles remaining
 ;; OUTPUT: A random tile
-;; For now random letter that does not depend on tiles left
-;; Need to change so that it takes into account number of each left
-;; Also select multiple tiles? 
+;
 
-(defun random-tile (bag)
-  (let ((tile 0)
-	(rand (random 27)))
-    (setf tile (svref *letters-array* rand))))
+(defun random-tile (bag n) 
+  (let* ((tile 0)
+	 (rand (random n))
+	 (index (nth-elt-index bag rand)))
+    (setf tile (svref *letters-array* index))))
 
 
 ;; RANDOM-RACKS
 ;; -------------------
-;; INPUT: BAG, a
+;; INPUT: BAG, an array, N, num tiles remaining
 ;; OUTPUT: 2x7 array of random tiles
 
-(defun random-racks (bag)
+(defun random-racks (bag n)
   (let ((racks (make-array '(2 7))))
     (dotimes (i 7 racks)
-      (setf (aref racks 0 i) (random-tile bag))
-      (setf (aref racks 0 i) (random-tile bag)))))
+      (setf (aref racks 0 i) (random-tile bag n))
+      (setf (aref racks 0 i) (random-tile bag n)))))
 
 
   
