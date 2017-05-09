@@ -65,9 +65,20 @@
 		  (-- dw -- -- -- tl -- -- -- tl -- -- -- dw --)
 		  (tw -- -- dl -- -- -- tw -- -- -- dl -- -- tw))))
 
+;;  The TILE struct
+;; -----------------------
 
+(defstruct (tile (:print-function print-tile))
+  letter
+  value
+  row
+  col)
 
-;; The SCRABBLE Struct
+(defun print-tile (tile str d)
+  (declare (ignore d))
+  (format str "~A " (tile-letter tile)))
+
+;;  The SCRABBLE struct
 ;; ---------------------
 
 (defstruct (scrabble (:print-function print-scrabble))
