@@ -21,6 +21,10 @@
 ;; DEFINE-CONSTANTS
 ;; ---------------------
 
+(defconstant *dl* 'dl)
+(defconstant *dw* 'dw)
+(defconstant *tl* 'tl)
+(defconstant *tw* 'tw)
 (defconstant *open* '--)
 (defconstant *ply0* 0)
 (defconstant *ply1* 1)
@@ -28,10 +32,6 @@
 
 (defconstant *num-tiles-left* 100)
 
-(defconstant *dl* 0)
-(defconstant *dw* 0)
-(defconstant *tl* 0)
-(defconstant *tw* 0)
 
 
 (defconstant *letters-array* 
