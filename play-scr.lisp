@@ -277,30 +277,50 @@
     (setf (aref (scrabble-board game) row col) *string*)))
 
 
+
 ;; REMOVE-FROM-RACK! 
 ;; ------------------------
 ;; INPUT: GAME, a SCRABBLE struct, LETTER, a letter
-;; SIDE EFFECT: Remove letter from rack
+;; OUTPUT: A tile of that LETTER 
+;; SIDE EFFECT: Modifies GAME by removing tile from the rack
 
 (defun remove-from-rack! (game letter)
-  )
+  (let ((player (whose-turn game))
+	(index 0)
+	(tile (make-tile :letter letter
+			 :value (svref *letter-val-array* (position letter *letters-array*)))))
+    (setf (scrabble-rack_0 game) 
+      (remove tile (scrabble-rack_0 game) :test #'tile-eq? :count 1))))
+;	(cond 
+;	 ((equal player *ply0*)
+;	  (setf index (position letter (scrabble-rack_0 game))) 
+;;	  (setf tile (nth index (scrabble-rack_0 game)))
+;	  (remove letter (scrabble-rack_0 game) :count 1))
+;;	 (T
+;	  (setf index (position letter (scrabble-rack_1 game)))
+;	  (setf tile (nth index (scrabble-rack_1 game)))
+;	  (remove letter (scrabble-rack_1 game) :count 1)))))
+	 ;; PLAYER 1
+      ;;(remove letter (scrabble-rack_1 game) :count 1)
+    
+    
 
 ;; PICK-TILES!
 ;; ------------------------
+;; INPUT: GAME, scrabble struct, PLAYER, either *ply0* or *ply1*, N, number
+;; OUTPUT: GAME, modified such that N tiles are added to PLAYER's rack
 
-(defun pick-tiles! (game n)
-  (let ((ply (whose-turn game))
-        (bag (scrabble-bag game))
-        (num (scrabble-num-tiles-left game))
-        (letter 'A))
-
-    (dotimes (i 7)
-      ;; When there is not a tile (represented by 0)
-      (when (not (= (aref racks ply i) 0))
-        ;; Set LETTER to a random-tile from the bag
-        (setf letter (random-tile bag num)) 
-        ;; Replace 0 with the LETTER
-        (setf (aref (scrabble-rack game) ply i) letter)
-        ;; Remove LETTER from the bag 
-        ))))
-
+(defun pick-tiles! (game player n)
+  (dotimes (i n)
+    (if (equal player *ply0*)
+	;; Player 0
+	(setf (scrabble-rack_0 game)
+	  (cons (first (scrabble-bag game))
+		(scrabble-rack_0 game)))
+      ;; Player 1
+      (setf (scrabble-rack_1 game)
+	(cons (first (scrabble-bag game))
+	      (scrabble-rack_1 game))))
+    ;; Remove tile from bag
+    (setf (scrabble-bag game)
+      (rest (scrabble-bag game)))))

@@ -38,7 +38,7 @@
     (make-array 27 :initial-contents
 		'(- A B C D E F G H I J K L M N O P Q R S T U V W X Y Z)))
 
-(defconstant *initial-tiles-left* 
+(defconstant *initial-tiles-left-array* 
     (make-array 27 :initial-contents 
 		;;- A B C D E  F G H I J K L M N O P Q R S T U V W X Y Z
     		'(2 9 2 2 4 12 2 3 2 9 1 1 4 2 6 8 2 1 6 4 6 4 2 2 1 2 1)))
@@ -74,9 +74,20 @@
   row
   col)
 
+;; PRINT-TILE
+;; -------------------------
+
 (defun print-tile (tile str d)
   (declare (ignore d))
   (format str "~A " (tile-letter tile)))
+
+;; TILE-EQ?
+;; -------------------------
+
+(defun tile-eq? (tile_1 tile_2)
+  (equal (tile-letter tile_1)
+	 (tile-letter tile_2)))
+
 
 ;;  The SCRABBLE struct
 ;; ---------------------
@@ -86,9 +97,10 @@
   board
   ;; WHOSE-TURN
   whose-turn
-  ;; RACK: a 2x15 array of letters
-  rack
-  ;; BAG: tiles left a 27 vector of integers
+  ;; RACK_0,1: list of tiles
+  rack_0
+  rack_1
+  ;; BAG: a list of tiles
   bag
   ;; LETTER-VAL: a 27 vector of integers
   (point-values *letter-val-array*)
@@ -97,6 +109,21 @@
   ;; SCORE: a 2 vector of integers
   score)
 
+
+;; MAKE-BAG
+;; -----------------------
+;; INPUT: None
+;; OUTPUT: List of initial tile
+
+(defun make-bag ()
+  (let ((bag '()))
+    (dotimes (i 27 bag)
+      (dotimes (j (svref *initial-tiles-left-array* i))
+	(setf bag (cons (make-tile :letter (svref *letters-array* i)
+				   :value (svref *letter-val-array* i))
+			bag))))))
+	
+
 ;; WHOSE-TURN
 ;; -----------------
 ;; INPUT: GAME, a SCRABBLE struct
@@ -104,6 +131,7 @@
 
 (defun whose-turn (game)
   (scrabble-whose-turn game))
+
 
 ;; COPY-ARRAY
 ;; -----------------
@@ -128,8 +156,9 @@
 (defun copy-game (game)
   (make-scrabble :board (copy-array (scrabble-board game))
 		 :whose-turn (scrabble-whose-turn game)
-		 :rack (copy-array (scrabble-rack game))
-		 :bag (copy-array (scrabble-tiles-left game))
+		 :rack_0 (copy-list (scrabble-rack_0 game))
+		 :rack_1 (copy-list (scrabble-rack_1 game))
+		 :bag (copy-list (scrabble-bag game))
 		 :num-tiles-left (scrabble-tiles-left game)
 		 :point-values (copy-array (scrabble-point-values game))
 		 :score (copy-array (scrabble-score game))))
@@ -163,18 +192,16 @@
     
     ;; Print Player 1 and Player 2 Rack
     (format str "Player 1                        Player 2    ~%")
-    (let ((letter 0))
-      (dotimes (i 7)
+    
+      (dolist (tile (scrabble-rack_0 game))
 	(if (equal *ply0* p)
-	    (setf letter (aref rack p i))
-	  (setf letter *blank*))
-	(format str "~A " letter))
+	    (print-tile tile str d)
+	  (format str "- ")))
       (format str "                ")
-      (dotimes (i 7)
+      (dolist (tile (scrabble-rack_1 game))
 	(if (equal *ply1* p)
-	    (setf letter (aref rack p i))
-	  (setf letter *blank*))
-	(format str " ~A" letter)))
+	    (print-tile tile str d)
+	  (format str "- ")))
     
     (format str "~% ~% ~%")
     
@@ -190,11 +217,6 @@
 	(setf val (svref *letter-val-array* i))
 	(format str "~A " val)
 	(when (< val 10) (format str " ")))
-      (format str "~%Remain:  ")
-      (dotimes (i 27)
-	(setf rem (svref bag i))
-	(format str "~A " rem)
-	(when (< rem 10) (format str " ")))
       (format str "~%"))))
      
 
@@ -207,10 +229,14 @@
   (let ((game (make-scrabble
 	       :board *initial-board*
 	       :whose-turn *ply0*
-	       :bag *initial-tiles-left*
+	       :bag (make-bag)
 	       :num-tiles-left *num-tiles-left*
-	       :rack (random-racks *initial-tiles-left* *num-tiles-left*)
+	       :rack_0 ()
+	       :rack_1 ()
 	       :score (make-array 2 :initial-element 0))))
+    (shake-bag! game)
+    (pick-tiles! game *ply0* 7)
+    (pick-tiles! game *ply1* 7)
     game))
 
 
@@ -244,30 +270,28 @@
   (nth-elt-index-acc arr n 0 n))
 
 
+;; SHAKE-BAG!
+;; ------------------
+;; INPUT: GAME, a scrabble struct
+;; OUTPUT: GAME, where the bag has been randomized
 
-;; RANDOM-TILE
-;; -----------------
-;; INPUT: BAG, an of integers, N, num tiles remaining
-;; OUTPUT: A random tile
-;
+(defun shake-bag! (game)
+  (setf (scrabble-bag game)
+    (shake-bag-acc (scrabble-bag game) ())))
 
-(defun random-tile (bag n) 
-  (let* ((tile 0)
-	 (rand (random n))
-	 (index (nth-elt-index bag rand)))
-    (setf tile (svref *letters-array* index))))
+(defun shake-bag-acc (bag new-bag)
+  (cond
+   ;; BASE CASE: BAG is empty
+   ((null bag)
+    new-bag)
+   ;; RECURSIVE CASE: BAG is nonempty
+   (T
+    (let* ((length (list-length bag))
+	   (rand (random length))
+	   (tile (nth rand bag)))
+      (shake-bag-acc (remove tile bag :count 1)
+		     (cons tile new-bag))))))
 
-
-;; RANDOM-RACKS
-;; -------------------
-;; INPUT: BAG, an array, N, num tiles remaining
-;; OUTPUT: 2x7 array of random tiles
-
-(defun random-racks (bag n)
-  (let ((racks (make-array '(2 7))))
-    (dotimes (i 7 racks)
-      (setf (aref racks 0 i) (random-tile bag n))
-      (setf (aref racks 0 i) (random-tile bag n)))))
 
 
   
