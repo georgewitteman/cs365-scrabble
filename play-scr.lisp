@@ -286,23 +286,14 @@
 
 (defun remove-from-rack! (game letter)
   (let ((player (whose-turn game))
-	(index 0)
 	(tile (make-tile :letter letter
 			 :value (svref *letter-val-array* (position letter *letters-array*)))))
-    (setf (scrabble-rack_0 game) 
-      (remove tile (scrabble-rack_0 game) :test #'tile-eq? :count 1))))
-;	(cond 
-;	 ((equal player *ply0*)
-;	  (setf index (position letter (scrabble-rack_0 game))) 
-;;	  (setf tile (nth index (scrabble-rack_0 game)))
-;	  (remove letter (scrabble-rack_0 game) :count 1))
-;;	 (T
-;	  (setf index (position letter (scrabble-rack_1 game)))
-;	  (setf tile (nth index (scrabble-rack_1 game)))
-;	  (remove letter (scrabble-rack_1 game) :count 1)))))
-	 ;; PLAYER 1
-      ;;(remove letter (scrabble-rack_1 game) :count 1)
-    
+    (if (equal player *ply0*)	
+	(setf (scrabble-rack_0 game) 
+	  (remove tile (scrabble-rack_0 game) :test #'tile-eq? :count 1))
+      (setf (scrabble-rack_1 game)
+	(remove tile (scrabble-rack_1 game) :test #'tile-eq? :count 1)))
+    tile))
     
 
 ;; PICK-TILES!
