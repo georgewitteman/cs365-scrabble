@@ -49,7 +49,48 @@
 (defun is-legal? (game tiles locs)
   (when *debugging*
     (format t "Implement IS-LEGAL~%"))
+  (is-word? tiles))
+
+;;  IS-WORD?
+;; -------------------------
+;;  INPUTS: WORD, a LIST of TILEs representing a possible word
+;;  OUTPUT: t if the WORD is in the dictionary, NIL otherwise
+
+(defun is-word? (word)
+  (let ((word-str ""))
+    (dolist (til word)
+      (setf word-str (concatenate 'string word-str (string (tile-letter til)))))
+    (if (null (position word-str *ospd* :test #'word-equal?))
+      nil
+      t)))
+
+;; Some Tests
+;; (is-word? (list
+;;   (make-tile :letter #\A :row 0 :col 0) 
+;;   (make-tile :letter #\A :row 1 :col 0)
+;;   (make-tile :letter #\H :row 2 :col 0)))
+
+;;  WORD-EQUAL?
+;; ---------------------
+;;  INPUTS: WORD1 & WORD2, two STRINGS
+;;  OUTPUT: t if the words represent the same word, NIL otherwise
+
+(defun word-equal? (word1 word2)
+  (when (string-equal word1 word2) (return-from word-equal? t))
+  (when (not (= (length word1) (length word2))) (return-from word-equal? nil))
+  (dotimes (n (length word1))
+    (when (not (or (char-equal (aref word1 n) (aref word2 n))
+                   (char-equal #\- (aref word1 n))
+                   (char-equal #\- (aref word2 n))))
+      (return-from word-equal? nil)))
   t)
+
+;; Some Tests
+;; (word-equal? "" "")
+;; (word-equal? "abcde" "abcde")
+;; (word-equal? "abcde" "abcdd")
+;; (word-equal? "abcde" "abcd")
+;; (word-equal? "abcde" "ab-de")
 
 ;;  SCORE
 ;; ------------------------

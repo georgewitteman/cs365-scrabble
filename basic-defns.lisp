@@ -7,9 +7,10 @@
 
 (defparameter *files*
   (list "basic-defns"
+        "file-read"
         "play-scrabble"))
 
-;; CL
+;;  CL
 ;; ----------------------
 ;; Compiles and Loads all files
 
@@ -18,7 +19,14 @@
     (compile-file file)
     (load file)))
 
-;; DEFINE-CONSTANTS
+;;  Official Scrabble Players Dictionary
+;; ---------------------------------------
+
+(compile-file "file-read")
+(load "file-read")
+(defconstant *ospd* (file-to-list "ospd.txt"))
+
+;;  DEFINE-CONSTANTS
 ;; ---------------------
 
 (defconstant *dl* 'dl)
