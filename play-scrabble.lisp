@@ -13,10 +13,23 @@
 ;;               each TILE to include it's position
 
 (defun do-move! (game tiles locs)
-  (place-all-tiles! (scrabble-board game) tiles locs)
-  (refill-racks! game)
-  (let ((score (score (scrabble-board game) tiles)))
-    (setf (svref (scrabble-score game) (whose-turn game)) score)))
+  (when (is-legal? game tiles locs)
+    (place-all-tiles! (scrabble-board game) tiles locs)
+    (refill-racks! game)
+    (let ((score (score (scrabble-board game) tiles)))
+      (incf (svref (scrabble-score game) (whose-turn game))
+            score)
+      (setf (scrabble-whose-turn game) (- 1 (whose-turn game)))
+      score)))
+
+;;  PLACE-ALL-TILES!
+;; -----------------------
+;;  INPUTS: BOARD, a 2D array rpresenting a scrabble board.
+;;          TILES, a LIST of TILEs
+;;          LOCS, a LIST of LISTS of 2 integers representing the locations
+;;                to place the TILEs
+;;  OUTPUTS: The modified board
+;;  SIDE-EFFECT: Modifies BOARD with TILEs at LOCS
 
 (defun place-all-tiles! (board tiles locs)
   (cond ((null tiles) board)
@@ -25,6 +38,18 @@
                         (first (first locs))
                         (second (first locs)))
            (place-all-tiles! board (rest tiles) (rest locs)))))
+
+;;  IS-LEGAL?
+;; ---------------------------
+;;  INPUTS: GAME
+;;          TILES
+;;          LOCS
+;;  OUTPUTS: t if the move is legal, NIL otherwise
+
+(defun is-legal? (game tiles locs)
+  (when *debugging*
+    (format t "Implement IS-LEGAL~%"))
+  t)
 
 ;;  SCORE
 ;; ------------------------
@@ -61,7 +86,8 @@
 ;;  OUTPUT: The score for the given word
 
 (defun score-word (board word)
-  (format t "score for ~A:~A ~%" word (score-word-acc board word 0))
+  (when *debugging*
+    (format t "score for ~A:~A ~%" word (score-word-acc board word 0)))
   (score-word-acc board word 0))
 
 (defun score-word-acc (board word score)

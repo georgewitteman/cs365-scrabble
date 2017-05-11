@@ -2,6 +2,9 @@
 ;; Basic Definitions
 ;; =====================
 
+;; Useful for quickly turning off debug printing
+(defconstant *debugging* t)
+
 (defparameter *files*
   (list "basic-defns"
         "play-scrabble"))
@@ -122,20 +125,16 @@
   (scrabble-whose-turn game))
 
 
-;; COPY-ARRAY
+;;  COPY-ARRAY
 ;; -----------------
-;; INPUT: ARR, a 1 or 2-dimensional array
-;; OUTPUT: A copy 
+;;  INPUT: ARR, an ARRAY
+;;  OUTPUT: A copy 
 
 (defun copy-array (arr)
-  (let* ((dim (array-dimensions arr))
-         (copy (make-array dim)))
-    (if (= 1 (list-length dim)
-           (dotimes (x (first dim) copy)
-             (setf (svref copy x) (svref arr x))))
-      (dotimes (r (first dim))
-        (dotimes (c (second dim) copy)
-          (setf (aref copy r c) (aref arr r c)))))))
+  (let ((dims (array-dimensions arr)))
+    (adjust-array
+      (make-array dims :displaced-to arr)
+      dims)))
 
 ;; COPY-GAME
 ;; -----------------
@@ -164,7 +163,7 @@
          (bag (scrabble-bag game)))
 
     ;; Print Title
-    (format str "~%                   Scrabble~%~%")
+    (format str "~%                  Scrabble~%~%")
 
 
     ;; Print Board
@@ -177,20 +176,20 @@
     (format str "~% ~%")
 
     ;; Print Player 1 and Player 2 Rack
-    (format str "Player 1                      Player 2    ~%")
+    (format str "Player 1                 Player 2    ~%")
 
     (format str "Rack: ")
     (dolist (tile (scrabble-rack_0 game))
       (if (equal *ply0* p)
         (print-tile tile str d)
         (format str "- ")))
-    (format str "          Rack: ")
+    (format str "     Rack: ")
     (dolist (tile (scrabble-rack_1 game))
       (if (equal *ply1* p)
         (print-tile tile str d)
         (format str "- ")))
 
-    (format str "~%Score: ~A                      Score: ~A"
+    (format str "~%Score: ~A                 Score: ~A"
             (svref (scrabble-score game) 0)
             (svref (scrabble-score game) 1))
 
@@ -217,7 +216,7 @@
 
 (defun new-scrabble ()
   (let ((game (make-scrabble
-                :board *initial-board*
+                :board (copy-array *initial-board*)
                 :whose-turn *ply0*
                 :bag (make-bag)
                 :num-tiles-left *num-tiles-left*
