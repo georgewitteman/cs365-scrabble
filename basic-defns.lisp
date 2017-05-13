@@ -7,7 +7,6 @@
 
 (defparameter *files*
   (list "basic-defns"
-        "file-read"
         "play-scrabble"))
 
 ;;  CL
@@ -22,7 +21,6 @@
 ;;  Official Scrabble Players Dictionary
 ;; ---------------------------------------
 
-(compile-file "file-read")
 (load "file-read")
 (defconstant *ospd* (file-to-list "ospd.txt"))
 

@@ -5,6 +5,7 @@
 ;;  DO-MOVE!
 ;; ----------------------
 ;;  INPUTS: GAME, a SCRABBLE struct
+;;          CHECK-LEGAL?, T if we should check if the move is legal
 ;;          TILES, a LIST of TILE structs
 ;;          LOCS, a LIST of LISTs of 2 integers representing the row/col
 ;;          locations for their corresponding TILEs
@@ -12,8 +13,9 @@
 ;;  SIDE-EFFECT: Modifies GAME to include TILES on the board and modifies
 ;;               each TILE to include it's position
 
-(defun do-move! (game tiles locs)
-  (when (is-legal? game tiles locs)
+(defun do-move! (game check-legal? tiles locs)
+  (when (or (not check-legal?)
+            (is-legal? game tiles locs))
     (place-all-tiles! (scrabble-board game) tiles locs)
     (refill-racks! game)
     (let ((score (score (scrabble-board game) tiles)))
@@ -47,9 +49,21 @@
 ;;  OUTPUTS: t if the move is legal, NIL otherwise
 
 (defun is-legal? (game tiles locs)
-  (when *debugging*
-    (format t "Implement IS-LEGAL~%"))
-  (is-word? tiles))
+  (if (empty-board? (scrabble-board game))
+    (and (valid-first-word? locs)
+         (is-word? tiles))
+    (is-word? tiles)))
+
+;;  VALID-FIRST-WORD?
+;; --------------------------
+;;  INPUTS: LOCS, a LIST of LISTS of 2 integers representing the locations
+;;          to place the TILEs
+;;  OUTPUT: T if the LOCS contain (7 7)
+
+(defun valid-first-word? (locs)
+  (cond ((null locs) nil)
+        ((equal (first locs) '(7 7)) t)
+        (t (valid-first-word? (rest locs)))))
 
 ;;  IS-WORD?
 ;; -------------------------
@@ -69,6 +83,19 @@
 ;;   (make-tile :letter #\A :row 0 :col 0) 
 ;;   (make-tile :letter #\A :row 1 :col 0)
 ;;   (make-tile :letter #\H :row 2 :col 0)))
+
+;;  EMPTY-BOARD?
+;; ---------------------
+;;  INPUTS: BOARD, a 2D array representing a scrabble board
+;;  OUTPUT: T if the board doesn't have any tiles, NIL otherwise
+
+(defun empty-board? (board)
+  (dotimes (row 15)
+    (dotimes (col 15)
+      (when (not (empty-space? board row col))
+        (return-from empty-board? nil))))
+  t)
+
 
 ;;  WORD-EQUAL?
 ;; ---------------------
