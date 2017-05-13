@@ -7,7 +7,9 @@
 
 (defparameter *files*
   (list "basic-defns"
-        "play-scrabble"))
+        "play-scrabble"
+        "move-generation"
+        ))
 
 ;;  CL
 ;; ----------------------
@@ -38,18 +40,25 @@
 
 (defconstant *num-tiles-left* 100)
 
+(defconstant *letters-list*
+             (list #\A #\B #\C #\D #\E
+                   #\F #\G #\H #\I #\J
+                   #\K #\L #\M #\N #\O
+                   #\P #\Q #\R #\S #\T
+                   #\U #\V #\W #\X #\Y
+                   #\Z))
+
 (defconstant *letters-array* 
-             (make-array 27 :initial-contents
-                         '(- A B C D E F G H I J K L M N O P Q R S T U V W X Y Z)))
+             (make-array 26 :initial-contents *letters-list*))
 
 (defconstant *initial-tiles-left-array* 
-             (make-array 27 :initial-contents 
-                         ;;- A B C D E  F G H I J K L M N O P Q R S T U V W X Y Z
-                         '(2 9 2 2 4 12 2 3 2 9 1 1 4 2 6 8 2 1 6 4 6 4 2 2 1 2 1)))
+             (make-array 26 :initial-contents 
+                         ;;A B C D E  F G H I J K L M N O P Q R S T U V W X Y Z
+                         '(9 2 2 4 12 2 3 2 9 1 1 4 2 6 8 2 1 6 4 6 4 2 2 1 2 1)))
 
 (defconstant *letter-val-array*
-             (make-array 27 :initial-contents
-                         '(0 1 3 3 2 1 4 2 4 1 8 5 1 3 1 1 3 10 1 1 1 1 4 4 8 4 10)))
+             (make-array 26 :initial-contents
+                         '(1 3 3 2 1 4 2 4 1 8 5 1 3 1 1 3 10 1 1 1 1 4 4 8 4 10)))
 
 (defconstant *initial-board*
              (make-array '(15 15) :initial-contents
@@ -68,6 +77,14 @@
                            (-- -- dw -- -- -- dl -- dl -- -- -- dw -- --)
                            (-- dw -- -- -- tl -- -- -- tl -- -- -- dw --)
                            (tw -- -- dl -- -- -- tw -- -- -- dl -- -- tw))))
+
+;;  The MOVE struct
+;; ----------------------
+
+(defstruct (move)
+  tiles      ; A list of TILE structs
+  locations  ; A list of locations ('(row col))
+  )
 
 ;;  The TILE struct
 ;; -----------------------
@@ -103,9 +120,32 @@
 ;; TILE-EQ?
 ;; -------------------------
 
-(defun tile-eq? (tile_1 tile_2)
-  (equal (tile-letter tile_1)
-         (tile-letter tile_2)))
+(defun tile-eq? (tile-1 tile-2)
+  (char-equal (tile-letter tile-1)
+              (tile-letter tile-2)))
+
+;;  NEW-MOVE
+;; ------------------
+;;  INPUTS: GAME, a SCRABBLE struct
+;;          WORD, a STRING
+;;          LOCS, a list of locations
+;;  OUPTUT: a MOVE struct
+
+(defun new-move (game word locs)
+  (let* ((word-l (loop for c across word collect c))
+         (tiles (tiles-from-chars-acc game word-l nil)))
+    (make-move :tiles tiles
+               :locations locs)))
+
+(defun tiles-from-string (game str)
+  (tiles-from-chars-acc game (loop for c across str collect c) nil))
+
+(defun tiles-from-chars-acc (game chars acc)
+  (cond ((null chars) acc)
+        (t (tiles-from-chars-acc game (rest chars)
+                                 (append acc (list (remove-from-rack!
+                                                     game
+                                                     (first chars))))))))
 
 
 ;; MAKE-BAG
@@ -115,7 +155,7 @@
 
 (defun make-bag ()
   (let ((bag '()))
-    (dotimes (i 27 bag)
+    (dotimes (i 26 bag)
       (dotimes (j (svref *initial-tiles-left-array* i))
         (setf bag (cons (make-tile :letter (svref *letters-array* i)
                                    :value (svref *letter-val-array* i))
@@ -205,11 +245,11 @@
           (val 0)
           (rem 0))
       (format str "Letters: ")
-      (dotimes (i 27)
+      (dotimes (i 26)
         (setf letter (svref *letters-array* i)) 
         (format str "~A  " letter))
       (format str "~%Values:  ")
-      (dotimes (i 27)
+      (dotimes (i 26)
         (setf val (svref *letter-val-array* i))
         (format str "~A " val)
         (when (< val 10) (format str " ")))
@@ -286,3 +326,9 @@
              (tile (nth rand bag)))
         (shake-bag-acc (remove tile bag :count 1)
                        (cons tile new-bag))))))
+
+(defun print-2d-array (arr dimension-x dimension-y)
+  (dotimes (x dimension-x)
+    (dotimes (y dimension-y)
+      (format t "~A " (aref arr x y)))
+    (format t "~%")))

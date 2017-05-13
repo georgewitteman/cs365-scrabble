@@ -6,23 +6,25 @@
 ;; ----------------------
 ;;  INPUTS: GAME, a SCRABBLE struct
 ;;          CHECK-LEGAL?, T if we should check if the move is legal
-;;          TILES, a LIST of TILE structs
-;;          LOCS, a LIST of LISTs of 2 integers representing the row/col
-;;          locations for their corresponding TILEs
+;;          WORD, a STRING representing the letters to put down
+;;          LOCS, a list of locations
 ;;  OUTPUTS: The score for the given move
 ;;  SIDE-EFFECT: Modifies GAME to include TILES on the board and modifies
 ;;               each TILE to include it's position
 
-(defun do-move! (game check-legal? tiles locs)
-  (when (or (not check-legal?)
+(defun do-move! (game check-legal? word locs)
+  (let ((tiles (tiles-from-string game word)))
+    (if (or (not check-legal?)
             (is-legal? game tiles locs))
-    (place-all-tiles! (scrabble-board game) tiles locs)
-    (refill-racks! game)
-    (let ((score (score (scrabble-board game) tiles)))
-      (incf (svref (scrabble-score game) (whose-turn game))
-            score)
-      (setf (scrabble-whose-turn game) (- 1 (whose-turn game)))
-      score)))
+      (progn 
+        (place-all-tiles! (scrabble-board game) tiles locs)
+        (refill-racks! game)
+        (let ((score (score (scrabble-board game) tiles)))
+          (incf (svref (scrabble-score game) (whose-turn game))
+                score)
+          (setf (scrabble-whose-turn game) (- 1 (whose-turn game)))
+          score))
+      (format t "INVALID MOVE!~%"))))
 
 ;;  PLACE-ALL-TILES!
 ;; -----------------------
@@ -324,12 +326,14 @@
 ;;  OUTPUT: T if (ROW, COL) is empty in GAME, NIL otherwise
 
 (defun empty-space? (board row col)
-  (let ((loc (aref board row col)))
-    (or (equal loc *open*)
-        (equal loc *tw*)
-        (equal loc *dl*)
-        (equal loc *dw*)
-        (equal loc *tl*))))
+  (if (or (>= row 15) (< row 0) (>= col 15) (< col 0))
+    t
+    (let ((loc (aref board row col)))
+      (or (equal loc *open*)
+          (equal loc *tw*)
+          (equal loc *dl*)
+          (equal loc *dw*)
+          (equal loc *tl*)))))
 
 ;;  TILE-FROM-LOC
 ;; ------------------------
@@ -360,20 +364,19 @@
 
 ;;  REMOVE-FROM-RACK! 
 ;; ------------------------
-;;  INPUT: GAME, a SCRABBLE struct, LETTER, a letter
+;;  INPUT: GAME, a SCRABBLE struct, LETTER, a CHARACTER
 ;;  OUTPUT: A tile of that LETTER 
 ;;  SIDE EFFECT: Modifies GAME by removing tile from the rack
 
 (defun remove-from-rack! (game letter)
-  (let ((player (whose-turn game))
-        (tile (make-tile :letter letter
+  (let ((rack (if (= (whose-turn game) 0)
+                (scrabble-rack_0 game)
+                (scrabble-rack_1 game)))
+        (tile (make-tile :letter (char-upcase letter)
                          :value (svref *letter-val-array*
-                                       (position letter *letters-array*)))))
-    (if (equal player *ply0*)	
-      (setf (scrabble-rack_0 game) 
-            (remove tile (scrabble-rack_0 game) :test #'tile-eq? :count 1))
-      (setf (scrabble-rack_1 game)
-            (remove tile (scrabble-rack_1 game) :test #'tile-eq? :count 1)))
+                                       (position letter *letters-array*
+                                                 :test #'char-equal)))))
+    (delete tile rack :test #'tile-eq? :count 1)
     tile))
 
 ;;  REFILL-RACKS!
