@@ -66,6 +66,33 @@
   ;; Reverse to keep the right ordering of letters
   (reverse (get-vertical-word board (1+ row) col 1)))
 
+;;  GET-HORIZONTAL-WORD
+;; -------------------------
+;;  INPUTS: BOARD, a 2D array representing a scrabble board
+;;          ROW & COL, the space to start searching
+;;          DELT, the direction to search (-1 for left, 1 for right)
+;;  OUTPUT: A list containing the tiles either above or below
+;;          the given tile (inclusive)
+
+(defun get-horizontal-word (board row col delt)
+  (get-horizontal-word-acc board row col delt nil))
+
+(defun get-horizontal-word-acc (board row col delt acc)
+  (cond ((empty-space? board row col) acc)
+        (t (get-horizontal-word-acc
+             board
+             row
+             (+ col delt)
+             delt
+             (cons (aref board row col) acc)))))
+
+;; Some useful helpers...
+(defun get-word-left (board row col)
+  (get-horizontal-word board row (1- col) -1))
+
+(defun get-word-right (board row col)
+  (reverse (get-horizontal-word board row (1+ col) 1)))
+
 ;;  TILES-TO-CHARS
 ;; -----------------------
 ;;  INPUTS: TILES, a LIST of TILES
@@ -73,7 +100,6 @@
 
 (defun tiles-to-chars (tiles)
   (map 'list #'tile-letter tiles))
-
 
 ;;  FIND-ANCHORS
 ;; --------------------------
@@ -100,5 +126,61 @@
                  (empty-space? board row (1- col))
                  (empty-space? board (1+ row) col)
                  (empty-space? board (1- row) col)))))
+
+;;  GENERATE-MOVES
+;; -----------------------
+;;  INPUTS: GAME, a SCRABBLE struct
+;;  OUTPUT: A list of MOVEs that the current player can do
+
+(defun generate-moves (game)
+  (let ((board (scrabble-board g)))
+    ;; For each anchor
+    (dolist (anchor (find-anchors board))
+      (let ((row (tile-row anchor))
+            (col (tile-col anchor)))
+        (if (not (empty-space? board (1- row) col))
+          ;; If the left part is already on the board
+          (let ((left (get-word-left board row col)))
+            ;; extend right
+            )
+          ;; Create all possible left parts
+          ;(left-part nil root-node (get-limit board row col))
+          )))))
+
+;;  GET-LIMIT
+;; ---------------------
+;;  INPUTS: BOARD, a 2d array representing a scrabble board
+;;          ROW & COL, the position of the location to get limit for
+;;  OUTPUT: The limit, i.e the number of non-anchor squares to the
+;;          left of the given space
+
+(defun get-limit (board row col)
+  (get-limit-acc board row (1- col) 0))
+
+(defun get-limit-acc (board row col acc)
+  (cond ((is-anchor? board row col) acc)
+        ((< col 0) acc)
+        (t (get-limit-acc board row (1- col) (1+ acc)))))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 

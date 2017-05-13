@@ -41,6 +41,7 @@
                         (first tiles)
                         (first (first locs))
                         (second (first locs)))
+           (remove-from-rack! g (first tiles))
            (place-all-tiles! board (rest tiles) (rest locs)))))
 
 ;;  IS-LEGAL?
@@ -301,11 +302,6 @@
            (setf col (+ col d-horiz)))
     (tile-from-loc board prev-row prev-col)))
 
-;;  WORD-TILES-FROM-START-END
-;; -------------------------------
-;;  INPUTS: BOARD, a 2D array representing a scrabble board
-;;          START, a lis
-
 ;;  OFF-BOARD?
 ;; ------------------------
 ;;  INPUTS: BOARD, a 2D array representing a scrabble board
@@ -351,7 +347,7 @@
 ;;  INPUTS: BOARD, a 2D array representing a scrabble board
 ;;          TILE, a TILE struct
 ;;          ROW & COL, the location on the board to place the tile
-;;  OUTPUTS: The modified tile
+;;  OUTPUT: The modified tile
 ;;  SIDE-EFFECTS: Modifies the tile to contain it's location,
 ;;                and modifies the board to contain the tile
 
@@ -361,23 +357,71 @@
   (setf (aref board row col) tile)
   tile)
 
+;;  GET-FROM-RACK
+;; -------------------
+;;  INPUTS: GAME, a SCRABBLE struct
+;;          LETTER, a CHARACTER
+;;  OUTPUT: A tile that matches LETTER in the current players rack
 
-;;  REMOVE-FROM-RACK! 
-;; ------------------------
-;;  INPUT: GAME, a SCRABBLE struct, LETTER, a CHARACTER
-;;  OUTPUT: A tile of that LETTER 
-;;  SIDE EFFECT: Modifies GAME by removing tile from the rack
+(defun get-from-rack (game letter)
+  (when (in-rack? game letter)
+    (make-tile :letter (char-upcase letter)
+               :value (svref *letter-val-array*
+                             (position letter *letters-array*
+                                       :test #'char-equal)))))
 
-(defun remove-from-rack! (game letter)
+;;  GET-RACK
+;; ---------------------
+;;  INPUTS: GAME, a SCRABBLE struct
+;;  OUTPUT: The current players rack
+
+(defun get-rack (game)
+  (if (= (whose-turn game) 0)
+    (scrabble-rack_0 game)
+    (scrabble-rack_1 game)))
+
+;;  IN-RACK?
+;; --------------------
+;;  INPUT: GAME, a SCRABBLE struct
+;;         LETTER, a CHARACTER
+;;  OUTPUT: T if the LETTER is in the rack, NIL otherwise
+
+(defun in-rack? (game letter)
   (let ((rack (if (= (whose-turn game) 0)
                 (scrabble-rack_0 game)
                 (scrabble-rack_1 game)))
         (tile (make-tile :letter (char-upcase letter)
-                         :value (svref *letter-val-array*
-                                       (position letter *letters-array*
-                                                 :test #'char-equal)))))
-    (delete tile rack :test #'tile-eq? :count 1)
-    tile))
+                         :value 0)))
+    (not (null (position tile rack :test #'tile-eq?)))))
+
+;;  PLACE-IN-RACK!
+;; -----------------------
+;;  INPUTS: GAME, a SCRABBLE struct
+;;          TILE, a TILE struct
+;;  OUTPUT: The modified rack
+;;  SIDE-EFFECT: Modifies the rack for the current player to contain TILE
+
+(defun place-in-rack! (game tile)
+  (if (= (whose-turn game) 0)
+    (setf (scrabble-rack_0 game)
+          (cons tile (scrabble-rack_0 game)))
+    (setf (scrabble-rack_1 game)
+          (cons tile (scrabble-rack_1 game)))))
+
+;;  REMOVE-FROM-RACK! 
+;; ------------------------
+;;  INPUT: GAME, a SCRABBLE struct
+;;         TILE, a TILE struct
+;;  OUTPUT: A tile of that LETTER 
+;;  SIDE EFFECT: Modifies GAME by removing tile from the rack
+
+(defun remove-from-rack! (game tile)
+  (if (= (whose-turn game) 0)
+    (setf (scrabble-rack_0 game)
+          (remove tile (scrabble-rack_0 game) :test #'tile-eq? :count 1))
+    (setf (scrabble-rack_1 game)
+          (remove tile (scrabble-rack_1 game) :test #'tile-eq? :count 1)))
+    tile)
 
 ;;  REFILL-RACKS!
 ;; -----------------------
