@@ -7,6 +7,7 @@
 
 (defparameter *files*
   (list "basic-defns"
+        "trie"
         "play-scrabble"
         "move-generation"
         ))
