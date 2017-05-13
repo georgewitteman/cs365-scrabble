@@ -7,7 +7,9 @@
 
 (defparameter *files*
     (list "basic-defns"
-	  "play-scr"))
+	  "play-scr"
+	  "trie"
+	  "file-read"))
 
 ;; CL
 ;; ----------------------
