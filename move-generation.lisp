@@ -170,6 +170,7 @@
 ;;  OUTPUT: A list of MOVEs that the current player can do
 
 (defun generate-moves (game)
+  (clear-legal-moves)
   (let ((board (scrabble-board game)))
     ;; For each anchor
     (dolist (anchor (find-anchors board))
