@@ -6,8 +6,8 @@
 ;; ----------------------
 ;;  INPUTS: GAME, a SCRABBLE struct
 ;;          CHECK-LEGAL?, T if we should check if the move is legal
-;;          WORD, a STRING representing the letters to put down
-;;          LOCS, a list of locations
+;;          WORD, a STRING representing the letters (including on board)
+;;          LOCS, a list of locations (including tiles on board)
 ;;  OUTPUTS: The score for the given move
 ;;  SIDE-EFFECT: Modifies GAME to include TILES on the board and modifies
 ;;               each TILE to include it's position
@@ -37,11 +37,12 @@
 
 (defun place-all-tiles! (board tiles locs)
   (cond ((null tiles) board)
-        (t (place-tile! board
-                        (first tiles)
-                        (first (first locs))
-                        (second (first locs)))
-           (remove-from-rack! g (first tiles))
+        (t (when (empty-space? board (first (first locs)) (second (first locs)))
+             (place-tile! board
+                          (first tiles)
+                          (first (first locs))
+                          (second (first locs)))
+             (remove-from-rack! g (first tiles)))
            (place-all-tiles! board (rest tiles) (rest locs)))))
 
 ;;  IS-LEGAL?

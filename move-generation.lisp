@@ -219,7 +219,7 @@
 
 (defun left-part (game partial-word partial-locs anchor nodey limit)
   (extend-right game partial-word nil
-                (append partial-locs (list 'L)) nodey anchor)
+                partial-locs nodey anchor)
   (if (> limit 0)
     ;; For each CHILD from NODEY
     (dolist (child (get-children nodey *trie*))
