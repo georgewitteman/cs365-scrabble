@@ -38,7 +38,7 @@
 (defconstant *ply1* 1)
 (defconstant *blank* '-)
 
-(defconstant *num-tiles-left* 100)
+(defconstant *num-tiles-left* 98)
 
 (defconstant *letters-list*
              (list #\A #\B #\C #\D #\E
@@ -247,7 +247,7 @@
     (format str "~%")
 
     ;; Print Player 1 and Player 2 Rack
-    (format str "Player 1~25TPlayer 2~%")
+    (format str "Player 1~25TPlayer 2~55TBag~%")
 
     (format str "Rack: ")
     (dolist (tile (scrabble-rack_0 game))
@@ -259,6 +259,7 @@
       (if (equal *ply1* p)
         (print-tile tile str d)
         (format str "- ")))
+    (format str "~55T~A" (scrabble-num-tiles-left game))
 
     (format str "~%Score: ~A~25TScore: ~A"
             (svref (scrabble-score game) 0)
