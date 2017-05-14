@@ -21,6 +21,11 @@
   parent
   (children (make-array 26 :initial-element nil)))
 
+(defun tr-node-char (nodey)
+  (last-char (tr-node-key nodey)))
+
+(defun last-char (str)
+  (char str (1- (length str))))
 
 
 ;; GET-ROOT-NODE
@@ -38,9 +43,9 @@
 
 (defun copy-node (nodey)
   (make-tr-node :key (tr-node-key nodey)
-		:is-word (tr-node-is-word nodey)
-		:parent (tr-node-parent nodey)
-		:children (tr-node-children nodey)))
+                :is-word (tr-node-is-word nodey)
+                :parent (tr-node-parent nodey)
+                :children (tr-node-children nodey)))
 
 
 ;; NEW-TRIE
@@ -51,9 +56,9 @@
 (defun new-trie ()
   (let ((tr (make-trie :root-key  "")))
     (insert-node (make-tr-node :key ""
-			       :is-word t
-			       :parent nil)
-		 tr)
+                               :is-word nil
+                               :parent nil)
+                 tr)
     tr))
 
 
@@ -86,10 +91,18 @@
 
 (defun get-child (nodey index tr)
   (let ((parent-key (tr-node-key nodey))
-	(child-key (list (svref *letters-array* index))))
+        (child-key (list (svref *letters-array* index))))
     (setf child-key (string-downcase (concatenate'string parent-key child-key)))
     (get-tr-node child-key tr)))
 
+(defun get-child-char (nodey chr tr)
+  (let ((index (position chr *letters-array* :test #'char-equal)))
+    (get-child nodey index tr)))
+
+(defun has-child? (nodey chr tr)
+  (let ((index (position chr *letters-array* :test #'char-equal)))
+    (not (null (get-child nodey index tr)))))
+  
 
 ;; GET-CHILDREN
 ;; -----------------------------------
@@ -98,12 +111,11 @@
 
 (defun get-children (nodey tr)
   (let ((listy ())
-	(child 0))
-    
+        (child 0))
     (dotimes (i 26 listy)
       (when (svref (tr-node-children nodey) i)
-	  (setf child (get-child nodey i tr))
-	  (setf listy (cons child listy))))))
+        (setf child (get-child nodey i tr))
+        (setf listy (cons child listy))))))
 
 ;; IS-WORD?
 ;; ------------------------------------
@@ -112,10 +124,12 @@
 
 (defun is-word? (word tr)
   (let ((nodey (get-tr-node word tr)))
-    (tr-node-is-word nodey)))
+    (if (null nodey)
+      nil
+      (tr-node-is-word nodey))))
 
-       
-       
+
+
 ;; INSERT-WORD
 ;; ----------------------------------
 ;; INPUTS: TR, a TRIE struct
@@ -125,55 +139,55 @@
 
 (defun insert-word (tr word)
   (let* ((old-node (get-root-node tr))
-	 (new-node (get-root-node tr))
-	 (*str* "")              ; string that accumulates word
-	 (*char* (char word 0))  ; current character in word
-	 (index 0)               ; index in letter array
-	 (stay-case-1 nil)	 ; boolean tells us if we've hit CASE 1 once
-	 (len (length word))     ; length of the word
-	 (chil-array (make-array 26)))
-	 
+         (new-node (get-root-node tr))
+         (*str* "")              ; string that accumulates word
+         (*char* (char word 0))  ; current character in word
+         (index 0)               ; index in letter array
+         (stay-case-1 nil)	 ; boolean tells us if we've hit CASE 1 once
+         (len (length word))     ; length of the word
+         (chil-array (make-array 26)))
+
     (dotimes (i len new-node)
-      
+
       (setf *char* (char word i))
       (setf index (position *char* *letters-array* :test #'char-equal))
       (setf *str* (concatenate 'string *str* (list *char*)))
-       
-      (cond
-       ;; Case 1: children array of OLD-NODE does NOT contain next character
-       ((or stay-case-1 
-	    (null (svref (tr-node-children old-node) index)))
-	
-	;; Create child node
-	(if (equal word *str*)
-	    (setf new-node (make-tr-node :key word :is-word t :parent old-node))
-	  (setf new-node (make-tr-node :key *str* :is-word nil :parent old-node)))
-	;; Insert NEW-NODE into TR
-	(insert-node new-node tr)
-	;; Delete OLD-NODE from TR
-	(delete-node old-node tr)
-	;; Update children array of OLD-NODE
-	(setf (svref (tr-node-children old-node) index) t)
-	;; Insert OLD-NODE back into Tr
-	(insert-node old-node tr)
-	;; Set OLD-NODE to current NEW-NODE
-	(setf old-node (copy-node new-node))
-	;; Set STAY-CASE-1 to T
-	(setf stay-case-1 t))
-       
-       ;; Case 2: children array of OLD-NODE contains next character
-       (T
-	;; Set OLD-NODE to its child
-	(setf old-node (get-child old-node index tr)))))))
 
-   
+      (cond
+        ;; Case 1: children array of OLD-NODE does NOT contain next character
+        ((or stay-case-1 
+             (null (svref (tr-node-children old-node) index)))
+
+         ;; Create child node
+         (if (equal word *str*)
+           (setf new-node (make-tr-node :key word :is-word t :parent old-node))
+           (setf new-node (make-tr-node :key *str* :is-word nil :parent old-node)))
+         ;; Insert NEW-NODE into TR
+         (insert-node new-node tr)
+         ;; Delete OLD-NODE from TR
+         (delete-node old-node tr)
+         ;; Update children array of OLD-NODE
+         (setf (svref (tr-node-children old-node) index) t)
+         ;; Insert OLD-NODE back into Tr
+         (insert-node old-node tr)
+         ;; Set OLD-NODE to current NEW-NODE
+         (setf old-node (copy-node new-node))
+         ;; Set STAY-CASE-1 to T
+         (setf stay-case-1 t))
+
+        ;; Case 2: children array of OLD-NODE contains next character
+        (T
+          ;; Set OLD-NODE to its child
+          (setf old-node (get-child old-node index tr)))))))
+
+
 ;; GET-TR-NODE
 ;; -------------------------------
 ;; INPUT: WORD, a string, TR, a TRIE struct
 ;; OUTPUT: Corresponding node
 
 (defun get-tr-node (word tr)
-  (gethash word (trie-hashy tr)))
+  (gethash (string-downcase word) (trie-hashy tr)))
 
 
 
@@ -196,7 +210,7 @@
 (defun print-ospd-nodes (tr)
   (dolist (word *ospd*)
     (format t "Key: ~A,     IS-WORD?: ~A,      PARENT-KEY: ~A ~%" word 
-	    (tr-node-is-word (get-tr-node word tr)) 
-	    (tr-node-key (tr-node-parent (get-tr-node word tr))))))
-  
-  
+            (tr-node-is-word (get-tr-node word tr)) 
+            (tr-node-key (tr-node-parent (get-tr-node word tr))))))
+
+

@@ -54,8 +54,8 @@
 (defun is-legal? (game tiles locs)
   (if (empty-board? (scrabble-board game))
     (and (valid-first-word? locs)
-         (is-word? tiles))
-    (is-word? tiles)))
+         (is-a-word? tiles))
+    (is-a-word? tiles)))
 
 ;;  VALID-FIRST-WORD?
 ;; --------------------------
@@ -68,12 +68,12 @@
         ((equal (first locs) '(7 7)) t)
         (t (valid-first-word? (rest locs)))))
 
-;;  IS-WORD?
+;;  IS-A-WORD?
 ;; -------------------------
 ;;  INPUTS: WORD, a LIST of TILEs representing a possible word
 ;;  OUTPUT: t if the WORD is in the dictionary, NIL otherwise
 
-(defun is-word? (word)
+(defun is-a-word? (word)
   (let ((word-str ""))
     (dolist (til word)
       (setf word-str (concatenate 'string word-str (string (tile-letter til)))))

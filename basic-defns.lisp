@@ -8,7 +8,7 @@
 (defparameter *files*
   (list "basic-defns"
         "play-scrabble"
-        "move-generation"
+        ;"move-generation"
         ))
 
 ;;  CL
@@ -86,6 +86,7 @@
   locations  ; A list of locations ('(row col))
   )
 
+
 ;;  The TILE struct
 ;; -----------------------
 
@@ -95,6 +96,8 @@
   row    ; position of the tile, NIL if not yet on the board
   col    ; "
   )
+
+;; NOTE: A WORD as referenced in these files is a LIST of TILEs
 
 ;;  The SCRABBLE struct
 ;; ---------------------
@@ -153,6 +156,16 @@
                                  (append acc (list (get-from-rack
                                                       game
                                                       (first chars))))))))
+;;  WORD-TO-STRING
+;; -------------------------
+;;  INPUTS: WORD, a LIST of TILEs
+;;  OUTPUTS: A string that corresponds to WORD
+
+(defun word-to-string (word)
+  (let ((list-o-chars nil))
+  (dolist (tile word)
+    (setf list-o-chars (append list-o-chars (list (tile-letter tile)))))
+  (coerce list-o-chars 'string)))
 
 ;;  MAKE-BAG
 ;; -----------------------
