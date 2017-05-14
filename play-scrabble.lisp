@@ -444,6 +444,8 @@
 ;;  SIDE-EFFECT: Modifies the appropriate rack in GAME
 
 (defun pick-tiles! (game player n)
+  (setf (scrabble-num-tiles-left game)
+    (- (scrabble-num-tiles-left game) n))
   (dotimes (i n)
     (if (equal player *ply0*)
       ;; Player 0
@@ -458,3 +460,61 @@
     (setf (scrabble-bag game)
           (rest (scrabble-bag game)))))
 
+
+;; TRADE-IN!
+;; ---------------------
+;; INPUT: GAME, a scrabble struct, LISTY, list of numbers corresponding to tiles in rack
+;; OUTPUT: GAME, modified so that player has traded in specified tiles
+;; SIDE EFFECT: Modifies GAME
+
+(defun trade-in! (game listy)
+  (let* ((initial-rack (scrabble-rack_0 game))
+	 (len (length initial-rack))
+	 (lis-len (length listy))
+	 (new-rack '()))
+    
+    ;; If it is Player 1's turn, reset rack
+    (when (equal (whose-turn game) *ply1*)
+      (setf initial-rack (scrabble-rack_1 game))
+      (setf len (length initial-rack)))
+    
+    ;; Add each letter in rack to bag or NEW-RACK
+    (dotimes (i len)
+      (when (not (equal i (first listy)))
+	(setf new-rack (cons (nth i initial-rack) new-rack)))
+      (when (equal i (first listy))
+	(setf listy (rest listy))
+	(setf (scrabble-bag game) (cons (nth i initial-rack) (scrabble-bag game)))))
+    
+    ;; Set NEW-RACK
+    (if (equal (whose-turn game) *ply0*)
+	(setf (scrabble-rack_0 game) new-rack)
+      (setf (scrabble-rack_1 game) new-rack))
+
+    ;; Shake the bag
+    (shake-bag! game)
+    
+    ;; Put new tiles into the rack
+    (pick-tiles! game (whose-turn game) lis-len)
+
+    ;; Print scrabble
+    (print-scrabble game t 0)
+    
+    ;; Toggle turns
+    (pass! game)
+    
+    game))
+
+
+;; PASS!
+;; -------------------------
+;; INPUT: GAME, a scrabble struct
+;; OUTPUT: GAME after player has passed
+;; SIDE EFFECT: Switch turn
+
+(defun pass! (game)
+  (let ((player (whose-turn game)))
+    (if (equal player *ply0*)
+	(setf (scrabble-whose-turn game) *ply1*)
+      (setf (scrabble-whose-turn game) *ply0*))
+    game))
