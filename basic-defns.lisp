@@ -115,8 +115,7 @@
 
 (defun print-tile (tile str d)
   (declare (ignore d))
-  ;; Prints out a tile 2-wide with white text and a blue background
-  (format str "~c[44m~c[37m~2@A~c[0m" #\ESC #\ESC (tile-letter tile) #\ESC))
+  (format str "~2A" (tile-letter tile)))
 
 ;; TILE-EQ?
 ;; -------------------------
@@ -226,9 +225,12 @@
     (dotimes (i 15)
       (format t "~2@A: " i)
       (dotimes (j 15)
-        (format str "~A "(aref board i j)))
+        (let ((el (aref board i j)))
+          (if (tile-p el)
+            ;; Print tiles on the board with a yellow bg and black text
+            (format str "~c[43m~c[30m~2A~c[0m " #\ESC #\ESC el #\ESC)
+            (format str "~3A" el))))
       (format str "~%"))
-
     (format str "~%")
 
     ;; Print Player 1 and Player 2 Rack
