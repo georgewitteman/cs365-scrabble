@@ -7,7 +7,6 @@
 
 (defparameter *files*
   (list "basic-defns"
-        "trie"
         "play-scrabble"
         "move-generation"
         ))
@@ -116,7 +115,7 @@
 
 (defun print-tile (tile str d)
   (declare (ignore d))
-  (format str "~A " (tile-letter tile)))
+  (format str "~2A" (tile-letter tile)))
 
 ;; TILE-EQ?
 ;; -------------------------
@@ -138,21 +137,27 @@
     (make-move :tiles tiles
                :locations locs)))
 
+;;  TILES-FROM-STRING
+;; -------------------------
+;;  INPUTS: GAME, a SCRABBLE struct
+;;          STR, a STRING
+;;  OUTPUTS: The TILEs from the current players rack that corresponds
+;;           to STR
+
 (defun tiles-from-string (game str)
   (tiles-from-chars-acc game (loop for c across str collect c) nil))
 
 (defun tiles-from-chars-acc (game chars acc)
   (cond ((null chars) acc)
         (t (tiles-from-chars-acc game (rest chars)
-                                 (append acc (list (remove-from-rack!
-                                                     game
-                                                     (first chars))))))))
+                                 (append acc (list (get-from-rack
+                                                      game
+                                                      (first chars))))))))
 
-
-;; MAKE-BAG
+;;  MAKE-BAG
 ;; -----------------------
-;; INPUT: None
-;; OUTPUT: List of initial tile
+;;  INPUT: None
+;;  OUTPUT: List of initial tile
 
 (defun make-bag ()
   (let ((bag '()))
@@ -162,11 +167,10 @@
                                    :value (svref *letter-val-array* i))
                         bag))))))
 
-
-;; WHOSE-TURN
+;;  WHOSE-TURN
 ;; -----------------
-;; INPUT: GAME, a SCRABBLE struct
-;; OUTPUT: The player whose turn it is
+;;  INPUT: GAME, a SCRABBLE struct
+;;  OUTPUT: The player whose turn it is
 
 (defun whose-turn (game)
   (scrabble-whose-turn game))
@@ -183,10 +187,10 @@
       (make-array dims :displaced-to arr)
       dims)))
 
-;; COPY-GAME
+;;  COPY-GAME
 ;; -----------------
-;; INPUT: GAME, a SCRABLE struct
-;; OUTPUT: A copy of GAME
+;;  INPUT: GAME, a SCRABLE struct
+;;  OUTPUT: A copy of GAME
 
 (defun copy-game (game)
   (make-scrabble :board (copy-array (scrabble-board game))
@@ -197,10 +201,10 @@
                  :num-tiles-left (scrabble-tiles-left game)
                  :score (copy-array (scrabble-score game))))
 
-;; PRINT-SCRABBLE
+;;  PRINT-SCRABBLE
 ;; -----------------
-;; INPUT: GAME, a scrabble struct
-;; SIDE EFFECT: Display SCRABBLE game
+;;  INPUT: GAME, a scrabble struct
+;;  SIDE EFFECT: Display SCRABBLE game
 
 (defun print-scrabble (game str d)
   (declare (ignore d))
@@ -210,37 +214,44 @@
          (bag (scrabble-bag game)))
 
     ;; Print Title
-    (format str "~%                  Scrabble~%~%")
-
+    (format t "~4T   ____________  ___   ___  ___  __   ____~%")
+    (format t "~4T  / __/ ___/ _ \\/ _ | / _ )/ _ )/ /  / __/~%")
+    (format t "~4T _\\ \\/ /__/ , _/ __ |/ _  / _  / /__/ _/~%")
+    (format t "~4T/___/\\___/_/|_/_/ |_/____/____/____/___/~%")
+    (format t "~%")
 
     ;; Print Board
+    (format t "~4T0  1  2  3  4  5  6  7  8  9  10 11 12 13 14~%")
     (dotimes (i 15)
+      (format t "~2@A: " i)
       (dotimes (j 15)
-        (format str "~A "(aref board i j)))
+        (let ((el (aref board i j)))
+          (if (tile-p el)
+            ;; Print tiles on the board with a yellow bg and black text
+            (format str "~c[43m~c[30m~2A~c[0m " #\ESC #\ESC el #\ESC)
+            (format str "~3A" el))))
       (format str "~%"))
-
-
-    (format str "~% ~%")
+    (format str "~%")
 
     ;; Print Player 1 and Player 2 Rack
-    (format str "Player 1                 Player 2    ~%")
+    (format str "Player 1~25TPlayer 2~%")
 
     (format str "Rack: ")
     (dolist (tile (scrabble-rack_0 game))
       (if (equal *ply0* p)
         (print-tile tile str d)
         (format str "- ")))
-    (format str "     Rack: ")
+    (format str "~25TRack: ")
     (dolist (tile (scrabble-rack_1 game))
       (if (equal *ply1* p)
         (print-tile tile str d)
         (format str "- ")))
 
-    (format str "~%Score: ~A                 Score: ~A"
+    (format str "~%Score: ~A~25TScore: ~A"
             (svref (scrabble-score game) 0)
             (svref (scrabble-score game) 1))
 
-    (format str "~% ~% ~%")
+    (format str "~% ~%")
 
     (let ((letter 0)
           (val 0)
@@ -248,18 +259,17 @@
       (format str "Letters: ")
       (dotimes (i 26)
         (setf letter (svref *letters-array* i)) 
-        (format str "~A  " letter))
+        (format str "~2A" letter))
       (format str "~%Values:  ")
       (dotimes (i 26)
         (setf val (svref *letter-val-array* i))
-        (format str "~A " val)
-        (when (< val 10) (format str " ")))
+        (format str "~2A" val))
       (format str "~%"))))
 
-;; NEW-SCRABBLE
+;;  NEW-SCRABBLE
 ;; ----------------
-;; INPUTS: None
-;; OUTPUT: A SCRABBLE struct representing a new game
+;;  INPUTS: None
+;;  OUTPUT: A SCRABBLE struct representing a new game
 
 (defun new-scrabble ()
   (let ((game (make-scrabble
@@ -276,13 +286,13 @@
     game))
 
 
-;; NTH-ELT-INDEX-ACC
+;;  NTH-ELT-INDEX-ACC
 ;; -----------------
-;; INPUT: ARR, an array of integers 
-;;        N, non-negative integer
-;;        I, current index
-;;        ACC, accumulator 
-;; OUTPUT: An index of where the nth element is
+;;  INPUT: ARR, an array of integers 
+;;         N, non-negative integer
+;;         I, current index
+;;         ACC, accumulator 
+;;  OUTPUT: An index of where the nth element is
 
 (defun nth-elt-index-acc (arr n i acc)
   (cond
@@ -296,20 +306,20 @@
     (T
       (nth-elt-index-acc arr n (incf i) (- acc (svref arr (- i 1)))))))
 
-;; NTH-ELT-INDEX
+;;  NTH-ELT-INDEX
 ;; -----------------
-;; INPUT: ARR, N
-;; OUTPUT: An index where nth element is in array 
-;; (wrapper function for NTH-ELT-INDEX)
+;;  INPUT: ARR, N
+;;  OUTPUT: An index where nth element is in array 
+;;  (wrapper function for NTH-ELT-INDEX)
 
 (defun nth-elt-index (arr n)
   (nth-elt-index-acc arr n 0 n))
 
 
-;; SHAKE-BAG!
+;;  SHAKE-BAG!
 ;; ------------------
-;; INPUT: GAME, a scrabble struct
-;; OUTPUT: GAME, where the bag has been randomized
+;;  INPUT: GAME, a scrabble struct
+;;  OUTPUT: GAME, where the bag has been randomized
 
 (defun shake-bag! (game)
   (setf (scrabble-bag game)
@@ -327,9 +337,3 @@
              (tile (nth rand bag)))
         (shake-bag-acc (remove tile bag :count 1)
                        (cons tile new-bag))))))
-
-(defun print-2d-array (arr dimension-x dimension-y)
-  (dotimes (x dimension-x)
-    (dotimes (y dimension-y)
-      (format t "~A " (aref arr x y)))
-    (format t "~%")))
