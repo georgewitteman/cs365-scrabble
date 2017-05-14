@@ -84,26 +84,38 @@
 ;; INPUT: NODEY, a node, INDEX, an integer 0 to 25
 ;; OUTPUT: Child of NODEY corresponding to INDEX
 
-(defun get-child (nodey index)
+(defun get-child (nodey index tr)
   (let ((parent-key (tr-node-key nodey))
 	(child-key (list (svref *letters-array* index))))
-    (setf child-key (concatenate'string parent-key child-key)))) 
+    (setf child-key (string-downcase (concatenate'string parent-key child-key)))
+    (get-tr-node child-key tr)))
 
 
 ;; GET-CHILDREN
 ;; -----------------------------------
-;; INPUT: NODEY, a node 
-;; 
+;; INPUT: NODEY, a node, TR, a TRIE struct
+;; OUTPUT: List of children
 
-;(defun get-children (nodey)
-
-
+(defun get-children (nodey tr)
+  (let ((listy ())
+	(child 0))
+    
+    (dotimes (i 26 listy)
+      (when (svref (tr-node-children nodey) i)
+	  (setf child (get-child nodey i tr))
+	  (setf listy (cons child listy))))))
 
 ;; IS-WORD?
 ;; ------------------------------------
-;; INPUT: TR, TRIE struct, WORD, string
+;; INPUT: WORD, a string, TR, TRIE struct
+;; OUTPUT: T if word, NIL otherwise
 
+(defun is-word? (word tr)
+  (let ((nodey (get-tr-node word tr)))
+    (tr-node-is-word nodey)))
 
+       
+       
 ;; INSERT-WORD
 ;; ----------------------------------
 ;; INPUTS: TR, a TRIE struct
@@ -118,8 +130,9 @@
 	 (*char* (char word 0))  ; current character in word
 	 (index 0)               ; index in letter array
 	 (stay-case-1 nil)	 ; boolean tells us if we've hit CASE 1 once
-	 (len (length word)))    ; length of the word
-    
+	 (len (length word))     ; length of the word
+	 (chil-array (make-array 26)))
+	 
     (dotimes (i len new-node)
       
       (setf *char* (char word i))
@@ -128,7 +141,9 @@
        
       (cond
        ;; Case 1: children array of OLD-NODE does NOT contain next character
-       ((or stay-case-1 (null (svref (tr-node-children old-node) index)))
+       ((or stay-case-1 
+	    (null (svref (tr-node-children old-node) index)))
+	
 	;; Create child node
 	(if (equal word *str*)
 	    (setf new-node (make-tr-node :key word :is-word t :parent old-node))
@@ -137,8 +152,8 @@
 	(insert-node new-node tr)
 	;; Delete OLD-NODE from TR
 	(delete-node old-node tr)
-	;; Reset children for OLD-NODE
-	(setf old-node (make-tr-node :key (tr-node-key old-node) :is-word t :parent (tr-node-parent old-node)))
+	;; Update children array of OLD-NODE
+	(setf (svref (tr-node-children old-node) index) t)
 	;; Insert OLD-NODE back into Tr
 	(insert-node old-node tr)
 	;; Set OLD-NODE to current NEW-NODE
@@ -146,10 +161,10 @@
 	;; Set STAY-CASE-1 to T
 	(setf stay-case-1 t))
        
-       ;; Case 1: children array of OLD-NODE contains next character
+       ;; Case 2: children array of OLD-NODE contains next character
        (T
 	;; Set OLD-NODE to its child
-	(setf old-node (get-child old-node index)))))))
+	(setf old-node (get-child old-node index tr)))))))
 
    
 ;; GET-TR-NODE
