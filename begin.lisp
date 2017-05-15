@@ -44,7 +44,7 @@ OUTPUT: T if WORD is a word, NIL otherwise~%~%")
   (format t "DO-MOVE!: Builds a word.~%INPUTS: GAME, a SCRABBLE struct, 
  CHECK-LEGAL? T or NIL,
  WORD, a string representing letters in the word you want to play (including letters on the board in direction of main word),
- LOCS, a list of locations of the form ((r_1 c_1) (r_2 c_2) ... (r_n c_n)). ~%OUTPUT: Modfied GAME with move done.~%~%")
+ LOCS, a list of locations of the form ((r_1 c_1) (r_2 c_2) ... (r_n c_n)) corresponding to the characters in WORD. ~%OUTPUT: Modfied GAME with move done.~%~%")
   (format t "TRADE-IN!: Trade in letters. 
 INPUTS: GAME, a scrabble struct, N, number of tiles you want to trade in.
 OUTPUT: Modified GAME such that letters have been traded in and it is now the other player's turn.~%~%")

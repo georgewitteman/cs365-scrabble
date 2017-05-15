@@ -375,11 +375,11 @@
       (setf movie-len (length movie))
 
       (dotimes (i movie-len)
-
+	
 	(setf letter (nth i (first movie)))
 	(setf r (first (nth i (second movie))))
 	(setf c (second (nth i (second movie))))
-
+	(format t "letter ~A r ~A c ~A~%" letter r c)
 	;; Check if each letter already on board
 	(when (empty-space? board r c)
 	  ;; Create and add this tile to TILES-LIST
@@ -387,11 +387,13 @@
 				  :value (svref *letter-val-array* (position letter *letters-array*))
 				  :row r
 				  :col c))
+	  (format t "a-tile ~A~%" a-tile)
 	  (cons a-tile tiles-list)))
 
       ;; Do-move! on GAMEY (copy of game)
       (do-move! gamey nil (first movie) (second movie))
       ;; Score-word
+      (format t "best move ~A score ~A" best-move best-score)
       (setf curr-score (score-word (scrabble-board gamey) tiles-list))
       ;; Update best score
       (when (or (> curr-score best-score) (and (= curr-score best-score)
@@ -399,6 +401,7 @@
 						(length (second best-move)))))
 	(setf best-move movie)
 	(setf best-score curr-score))
+      (format t "best move ~A best score ~A~%" best-move best-score)
       (setf gamey (copy-game game)))
     best-move))
 
