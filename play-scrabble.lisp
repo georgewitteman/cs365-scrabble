@@ -40,6 +40,7 @@
           score))
       (format t "INVALID MOVE!~%"))))
 
+
 (defun get-new-locs (game locs)
   (get-new-locs-acc game locs nil))
 
