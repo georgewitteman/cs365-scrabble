@@ -20,8 +20,18 @@
   parent
   (children (make-array 26 :initial-element nil)))
 
+;; TR-NODE-CHAR
+;; -------------------------
+;; INPUTS: NODEY, a TR-NODE
+;; OUTPUT: The last character in NODEY's key
+
 (defun tr-node-char (nodey)
   (last-char (tr-node-key nodey)))
+
+;; LAST-CHAR
+;; ------------------------
+;; INPUTS: STR, a STRING
+;; OUTPUT: The last character in STR
 
 (defun last-char (str)
   (char str (1- (length str))))
@@ -59,7 +69,6 @@
                  tr)
     tr))
 
-
 ;; INSERT-NODE
 ;; ----------------------------------
 ;; INPUT: NODEY, a TR-NODE struct, TR, a TRIE struct
@@ -69,8 +78,6 @@
 (defun insert-node (nodey tr)
   (setf (gethash (tr-node-key nodey) (trie-hashy tr)) nodey)
   nodey)
-
-
 
 ;; REMOVE-NODE
 ;; ------------------------------------
@@ -93,14 +100,27 @@
     (setf child-key (string-downcase (concatenate'string parent-key child-key)))
     (get-tr-node child-key tr)))
 
+;; GET-CHILD-CHAR
+;; -------------------------
+;; INPUTS: NODEY, a TR-NODE
+;;         CHR, a character
+;;         TR, a TRIE
+;; OUTPUT: The CHR child node from NODEY
+
 (defun get-child-char (nodey chr tr)
   (let ((index (position chr *letters-array* :test #'char-equal)))
     (get-child nodey index tr)))
 
+;; HAS-CHILD?
+;; --------------------
+;; INPUTS: NODEY, a TR-NODE
+;;         CHR, a CHARACTER
+;;         TR, a TRIE
+;; OUTPUT: T if the node has a child CHR, NIL otherwise
+
 (defun has-child? (nodey chr tr)
   (let ((index (position chr *letters-array* :test #'char-equal)))
     (not (null (get-child nodey index tr)))))
-
 
 ;; GET-CHILDREN
 ;; -----------------------------------
@@ -125,8 +145,6 @@
     (if (null nodey)
       nil
       (tr-node-is-word nodey))))
-
-
 
 ;; INSERT-WORD
 ;; ----------------------------------
@@ -178,7 +196,6 @@
           ;; Set OLD-NODE to its child
           (setf old-node (get-child old-node index tr)))))))
 
-
 ;; GET-TR-NODE
 ;; -------------------------------
 ;; INPUT: WORD, a string, TR, a TRIE struct
@@ -186,8 +203,6 @@
 
 (defun get-tr-node (word tr)
   (gethash (string-downcase word) (trie-hashy tr)))
-
-
 
 ;; ADD-ALL-WORDS
 ;; ------------------------------
@@ -198,17 +213,3 @@
 (defun add-all-words (tr)
   (dolist (word *ospd* tr)
     (insert-word tr word)))
-
-;; PRINT-OSPD-NODES
-;; ---------------------------
-;; INPUT: TR, a TRIE struct
-;; OUTPUT: None
-;; SIDE EFFECT: Prints all nodes
-
-(defun print-ospd-nodes (tr)
-  (dolist (word *ospd*)
-    (format t "Key: ~A,     IS-WORD?: ~A,      PARENT-KEY: ~A ~%" word 
-            (tr-node-is-word (get-tr-node word tr)) 
-            (tr-node-key (tr-node-parent (get-tr-node word tr))))))
-
-
