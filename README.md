@@ -28,6 +28,8 @@ You can also have the computer play games entirely on it's own. There are 3 func
   - `(random-vs-best)`: Player 1 does a random move, and player 2 does the best scoring move (i.e. player 2 should win)
   - `(best-vs-random)`: Same as above except players are swapped
   - `(best-vs-best)`: Each player does the best scoring move
+  
+The files `random-vs-best.txt`, `random-vs-random.txt`, and `best-vs-best.txt` show examples of the output for these functions.
 
 ## The Algorithm for Move Generation
 
