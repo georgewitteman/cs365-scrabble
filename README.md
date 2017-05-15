@@ -18,6 +18,10 @@ You can also use the functions `find-best-move` to find the move with the highes
     
 Lastly, you can also have the computer play games entirely on it's own. `(play-random-game)` will play a random game, and `(random-vs-best)` will play a game where player 1 does random moves and player 2 does the best moves.
 
+## The Algorithm for Move Generation
+
+To generate all legal scrabble moves we implemented Appel and Jacobson algorithm for move generation as described in the paper below.
+
 Andrew W. Appel and Guy J. Jacobson
  “The World’s Fastest Scrabble Program”
 https://pdfs.semanticscholar.org/da31/cb24574f7c881a5dbf008e52aac7048c9d9c.pdf
