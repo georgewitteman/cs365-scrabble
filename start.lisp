@@ -31,5 +31,3 @@
   (dolist (file *files*)
     (compile-file file)
     (load file)))
-
-
