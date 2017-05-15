@@ -2,6 +2,21 @@
 ;; PLAY-SCR.LISP
 ;; ========================
 
+;;  RANDOM-VS-BEST
+;; ----------------------
+
+(defun random-vs-best ()
+  (let ((gm (new-scrabble)))
+    (while (not (game-over? gm))
+           (format t "~A~%" gm)
+           (if (= (whose-turn gm) 0)
+             (do-random-move! gm)
+             (do-best-move! gm)))
+    (format t "~A~%" gm)
+    (if (> (svref (scrabble-score gm) 0) (svref (scrabble-score gm) 1))
+      (format t "~%Player 1 WINS!~%")
+      (format t "~%Player 2 WINS!~%"))))
+
 ;;  PLAY-RANDOM-GAME
 ;; -------------------
 ;;  INPUTS: NONE!
@@ -9,8 +24,7 @@
 ;;  SIDE-EFFECT: Creates and plays a random game
 
 (defun play-random-game ()
-  (let ((gm nil))
-    (setf gm (new-scrabble))
+  (let ((gm (new-scrabble)))
     (while (not (game-over? gm))
            (format t "~A~%" gm)
            (do-random-move! gm))
@@ -64,11 +78,11 @@
 ;;               each TILE to include it's position
 
 (defun do-move! (game check-legal? word locs)
-  (format t "Doing move: (player: ~A, word: ~A, locs: ~A)~%" 
-          (if (= (whose-turn game) 0)
-            "*plyr1*"
-            "*plyr2*")
-            word locs)
+  ;(format t "Doing move: (player: ~A, word: ~A, locs: ~A)~%" 
+          ;(if (= (whose-turn game) 0)
+            ;"*plyr1*"
+            ;"*plyr2*")
+            ;word locs)
   (let ((new-tiles (get-new-tiles game word locs))
         (new-locs (get-new-locs game locs)))
     (when (or (not check-legal?)
@@ -219,7 +233,13 @@
 ;;  OUTPUT: The score for the given move
 
 (defun score (board new-tiles)
-  (score-words board (get-new-words board new-tiles)))
+  ;(format t "Score ~A~%" new-tiles)
+  (let ((score (score-words board (get-new-words board new-tiles) new-tiles)))
+    (when (= (length new-tiles) 7)
+      ;; BINGO!
+      (setf score (+ score 50)))
+    ;(format t "Total score for ~A: ~A~%" new-tiles score)
+    score))
 
 ;;  SCORE-WORDS
 ;; --------------------------
@@ -227,16 +247,17 @@
 ;;          WORDS, A LIST containing a LIST of TILEs representing words
 ;;  OUTPUT: The total score for all the given words
 
-(defun score-words (board words)
-  (score-words-acc board words 0))
+(defun score-words (board words new-tiles)
+  (score-words-acc board words 0 new-tiles))
 
-(defun score-words-acc (board words score)
+(defun score-words-acc (board words score new-tiles)
   (cond ((null words) score)
         (t (score-words-acc board
                             (rest words)
-                            (+ (* (score-word board (first words))
-                                  (get-word-multiplier (first words)))
-                               score)))))
+                            (+ (* (score-word board (first words) new-tiles)
+                                  (get-word-multiplier (first words) new-tiles))
+                               score)
+                            new-tiles))))
 
 ;;  SCORE-WORD
 ;; ----------------------------
@@ -244,26 +265,39 @@
 ;;          WORD, a LIST of TILEs representing a word
 ;;  OUTPUT: The score for the given word
 
-(defun score-word (board word)
-  (format t "score for ~A:~A ~%" word (score-word-acc board word 0))
-  (score-word-acc board word 0))
+(defun score-word (board word new-tiles)
+  ;(format t "score for ~A:~A ~%" word (score-word-acc board word 0 new-tiles))
+  (score-word-acc board word 0 new-tiles))
 
-(defun score-word-acc (board word score)
-  (cond ((null word) score)
-        (t (score-word-acc board
-                           (rest word)
-                           (+ score
-                              (* (get-tile-multiplier (tile-row (first word))
-                                                      (tile-col (first word)))
-                                 (tile-value (first word))))))))
+(defun score-word-acc (board word score new-tiles)
+  (cond ((null word)
+         ;(format t "~%")
+         score)
+        (t ;(format t "~A(~A*~A[~A][~A->~A]) + "
+           ;        (first word)
+           ;        (tile-value (first word))
+           ;        (get-tile-multiplier (first word) new-tiles)
+           ;        (* (get-tile-multiplier (first word) new-tiles)
+           ;           (tile-value (first word)))
+           ;        score
+           ;        (+ score (* (get-tile-multiplier (first word) new-tiles)
+           ;                    (tile-value (first word)))))
+          (score-word-acc board (rest word)
+                          (+ score (* (get-tile-multiplier (first word)
+                                                           new-tiles)
+                                      (tile-value (first word))))
+                           new-tiles))))
 
 ;;  GET-TILE-MULTIPLIER
 ;; ------------------------
 ;;  INPUTS: ROW & COL, position of space on the board
 ;;  OUTPUT: The multiplier for that space
 
-(defun get-tile-multiplier (row col)
-  (let ((premium (get-space-premium row col)))
+(defun get-tile-multiplier (tile new-tiles)
+  ;; If it's not a new tile
+  (when (null (member tile new-tiles :test #'equal))
+    (return-from get-tile-multiplier 1))
+  (let ((premium (get-space-premium (tile-row tile) (tile-col tile))))
     (cond ((equal premium *dl*) 2)
           ((equal premium *tl*) 3)
           (t 1))))
@@ -275,22 +309,28 @@
 ;;          in (0 0) would return at least 3 (possibly 9+ if it covers another
 ;;          triple word space.
 
-(defun get-word-multiplier (word)
-  (get-word-multiplier-acc word 1))
+(defun get-word-multiplier (word new-tiles)
+  (get-word-multiplier-acc word new-tiles 1))
 
-(defun get-word-multiplier-acc (word acc)
+(defun get-word-multiplier-acc (word new-tiles acc)
   (if (null word)
     acc
     (let* ((row (tile-row (first word)))
            (col (tile-col (first word)))
            (premium (get-space-premium row col)))
-      (cond ((equal premium *dw*)
+      (cond ((and (equal premium *dw*)
+                  ;; And it's a new tile
+                  (not (null (member (first word) new-tiles :test #'equal))))
              (get-word-multiplier-acc (rest word)
+                                      new-tiles
                                       (* acc 2)))
-            ((equal premium *tw*)
+            ((and (equal premium *tw*)
+                  ;; And it's a new tile
+                  (not (null (member (first word) new-tiles :test #'equal))))
              (get-word-multiplier-acc (rest word)
+                                      new-tiles
                                       (* acc 3)))
-            (t (get-word-multiplier-acc (rest word) acc))))))
+            (t (get-word-multiplier-acc (rest word) new-tiles acc))))))
 
 ;;  GET-SPACE-PREMIUM
 ;; ------------------------------
@@ -331,65 +371,21 @@
 ;;          from the given TILE, NIL if no words are made
 
 (defun get-words-at-tile (board tile)
+  ;(format t "get-words-at-tile: ~A~%" tile)
   (let ((words nil)
-        (horizontal (get-word-from-start-end
-                      board
-                      (get-end-tile board tile -1 0)
-                      (get-end-tile board tile 1 0)))
-        (vertical (get-word-from-start-end
-                    board
-                    (get-end-tile board tile 0 -1)
-                    (get-end-tile board tile 0 1))))
-    (if (> (length horizontal) 1)
+        (horizontal (append
+                      (get-word-left board (tile-row tile) (tile-col tile))
+                      (list tile)
+                      (get-word-right board (tile-row tile) (tile-col tile))))
+        (vertical (append
+                    (get-word-above board (tile-row tile) (tile-col tile))
+                    (list tile)
+                    (get-word-below board (tile-row tile) (tile-col tile)))))
+    (when (> (length horizontal) 1)
       (setf words (append words (list horizontal))))
-    (if (> (length vertical) 1)
+    (when (> (length vertical) 1)
       (setf words (append words (list vertical))))
     words))
-
-;;  GET-WORD-FROM-START-END
-;; ------------------------------
-;;  INPUTS: START-TILE, a TILE that begins a word
-;;          END-TILE, a TILE that ends a word
-;;  OUTPUT: A LIST of all the TILEs from START-TILE to END-TILE inclusive
-
-(defun get-word-from-start-end (board start-tile end-tile)
-  (let ((start-row (tile-row start-tile))
-        (start-col (tile-col start-tile))
-        (end-row (tile-row end-tile))
-        (end-col (tile-col end-tile))
-        (locs nil))
-    (if (equal start-row end-row)
-      ;; Horizontal
-      (while (<= start-col end-col)
-             (setf locs (cons (tile-from-loc board start-row start-col)
-                              locs))
-             (incf start-col))
-      ;; Vertical
-      (while (<= start-row end-row)
-             (setf locs (cons (tile-from-loc board start-row start-col)
-                              locs))
-             (incf start-row)))
-    (reverse locs)))
-
-;;  GET-END-TILE
-;; -----------------------
-;;  INPUTS: BOARD, a 2D array representing a scrabble board
-;;          TILE, a TILE on the board
-;;          D-HORIZ & D-VERT, how many spaces to check in each direction (+/-1)
-;;  OUTPUT: the first or last TILE in a row of tiles
-
-(defun get-end-tile (board tile d-horiz d-vert)
-  (let ((prev-row (tile-row tile))
-        (prev-col (tile-col tile))
-        (row (tile-row tile))
-        (col (tile-col tile)))
-    (while (not (or (off-board? board row col)
-                    (empty-space? board row col)))
-           (setf prev-row row)
-           (setf prev-col col)
-           (setf row (+ row d-vert))
-           (setf col (+ col d-horiz)))
-    (tile-from-loc board prev-row prev-col)))
 
 ;;  OFF-BOARD?
 ;; ------------------------
@@ -598,7 +594,7 @@
 ;; SIDE EFFECT: Switch turn
 
 (defun pass! (game)
-  (format t "---PASSING ~A~%" (whose-turn game))
+  ;(format t "---PASSING ~A~%" (whose-turn game))
   (let ((player (whose-turn game)))
     (if (equal player *ply0*)
 	(setf (scrabble-whose-turn game) *ply1*)

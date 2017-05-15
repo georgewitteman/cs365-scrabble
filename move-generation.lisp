@@ -201,7 +201,12 @@
 (defun generate-moves (game)
   (clear-legal-moves)
   (when (empty-board? (scrabble-board game))
-    (extend-right game nil nil nil (get-root-node *trie*) '(7 7) nil)
+    (left-part game nil nil '(7 7) (get-root-node *trie*)
+               (get-limit (scrabble-board game) 7 7) nil)
+    (transpose-board! game)
+    (left-part game nil nil '(7 7) (get-root-node *trie*)
+               (get-limit (scrabble-board game) 7 7) t)
+    (transpose-board! game)
     (return-from generate-moves *legal-moves*))
   (generate-moves-helper game nil)
   (transpose-board! game)
@@ -254,6 +259,7 @@
 ;;  INPUTS: GAME, a SCRABBLE struct
 ;;          PARTIAL-WORD, a LIST of TILEs representing the already built part
 ;;                        of the word
+;;          PARTIAL-LOCS
 ;;          ANCHOR, the anchor square we are searching from
 ;;          NODEY, the node we get to from PARTIAL-WORD
 ;;          LIMIT, number of non-anchor squares next to the left of anchor
@@ -361,59 +367,17 @@
 ;; OUTPUT: A list containing a string and a list of positions
 
 (defun find-best-move (game)
-  (let ((move-list (generate-moves game))
-	(gamey (copy-game game))
-	(board (scrabble-board game))
-	(best-move ())
-	(best-score 0)
-	(curr-score 0)
-	(movie-len 0)
-	(letter 0)
-	(r 0)
-	(c 0)
-	(a-tile 0)
-	(locs-list ())
-	(tiles-list ())
-	)
-    (format t "move list ~A" move-list)
-    (dolist (movie move-list)
-      (setf movie-len (length movie))
-      (format t "dotimes")
-      (dotimes (i movie-len)
-	(format t " dotime i ~A" i)
-	(setf letter (char (first movie) i))
-	(setf r (first (nth i (second movie))))
-	(setf c (second (nth i (second movie))))
-	(format t "letter ~A r ~A c ~A~%" letter r c)
-
-	;; Check if each letter already on board
-	(when (empty-space? board r c)
-	  (format t "are we here right before?")
-	  ;; Create and add this tile to TILES-LIST
-	  (setf a-tile (make-tile :letter letter
-				  :value (aref *letter-val-array* 
-						(position letter *letters-array* :test #'char-equal))
-				  :row r
-				  :col c))
-	  (format t "or here right after?~%")
-	  (format t "a-tile ~A~%" a-tile)
-	  (setf tiles-list (cons a-tile tiles-list))))
-
-      ;; Do-move! on GAMEY (copy of game)
-      (do-move! gamey nil (first movie) (second movie))
-      ;; Score-word
-      (format t "best move ~A score ~A" best-move best-score)
-      (setf curr-score (score-word (scrabble-board gamey) tiles-list))
-      ;; Update best score
-      (format t "maybe we are here?")
-      (when (or (> curr-score best-score) (and (= curr-score best-score)
-					     (> (length (second movie))
-						(length (second best-move)))))
-	(format t "or here.... ~%")
-	(setf best-move movie)
-	(setf best-score curr-score))
-      (format t "best move ~A best score ~A~%" best-move best-score)
-      (setf gamey (copy-game game)))
+  (let* ((moves (generate-moves game))
+         (best-move (first moves))
+         (best-score 0))
+    (dolist (move moves)
+      (let* ((game-copy (copy-game game))
+             (word (first move))
+             (locs (second move))
+             (score (do-move! game-copy t word locs)))
+        (when (> score best-score)
+          (setf best-move move)
+          (setf best-score score))))
     best-move))
 
 ;; DO-BEST-MOVE!
