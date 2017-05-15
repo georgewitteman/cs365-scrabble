@@ -2,15 +2,14 @@
 ;;; TRIE.LISP
 ;;; ==============================
 
+(defconstant *ospd* (file-to-list "ospd.txt"))
+
 ;; TRIE Struct
 ;; ------------------------------
-
 
 (defstruct trie
   (hashy (make-hash-table :test #'equal)) ; hash-table key=word, value=tr-node
   root-key)                               ; hash-table key for root node
-
-
 
 ;; TR-NODE Struct
 ;; ------------------------------
@@ -26,7 +25,6 @@
 
 (defun last-char (str)
   (char str (1- (length str))))
-
 
 ;; GET-ROOT-NODE
 ;; -------------------------------
@@ -102,7 +100,7 @@
 (defun has-child? (nodey chr tr)
   (let ((index (position chr *letters-array* :test #'char-equal)))
     (not (null (get-child nodey index tr)))))
-  
+
 
 ;; GET-CHILDREN
 ;; -----------------------------------
@@ -143,9 +141,9 @@
          (*str* "")              ; string that accumulates word
          (*char* (char word 0))  ; current character in word
          (index 0)               ; index in letter array
-         (stay-case-1 nil)	 ; boolean tells us if we've hit CASE 1 once
+         (stay-case-1 nil)  ; boolean tells us if we've hit CASE 1 once
          (len (length word))     ; length of the word
-         (chil-array (make-array 26)))
+         )
 
     (dotimes (i len new-node)
 
