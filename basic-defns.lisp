@@ -119,7 +119,7 @@
 
 (defun print-tile (tile str d)
   (declare (ignore d))
-  (format str "~2A" (tile-letter tile)))
+  (format str "~A|" (tile-letter tile)))
 
 ;; TILE-EQ?
 ;; -------------------------
@@ -128,35 +128,6 @@
   (char-equal (tile-letter tile-1)
               (tile-letter tile-2)))
 
-;;  NEW-MOVE
-;; ------------------
-;;  INPUTS: GAME, a SCRABBLE struct
-;;          WORD, a STRING
-;;          LOCS, a list of locations
-;;  OUPTUT: a MOVE struct
-
-(defun new-move (game word locs)
-  (let* ((word-l (loop for c across word collect c))
-         (tiles (tiles-from-chars-acc game word-l nil)))
-    (make-move :tiles tiles
-               :locations locs)))
-
-;;  TILES-FROM-STRING
-;; -------------------------
-;;  INPUTS: GAME, a SCRABBLE struct
-;;          STR, a STRING
-;;  OUTPUTS: The TILEs from the current players rack that corresponds
-;;           to STR
-
-(defun tiles-from-string (game str)
-  (tiles-from-chars-acc game (loop for c across str collect c) nil))
-
-(defun tiles-from-chars-acc (game chars acc)
-  (cond ((null chars) acc)
-        (t (tiles-from-chars-acc game (rest chars)
-                                 (append acc (list (get-from-rack
-                                                      game
-                                                      (first chars))))))))
 ;;  WORD-TO-STRING
 ;; -------------------------
 ;;  INPUTS: WORD, a LIST of TILEs

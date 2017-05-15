@@ -3,6 +3,36 @@
 ;;  MOVE-GENERATION.LISP
 ;; =====================
 
+(defparameter *legal-moves* nil)
+
+(defparameter *trie* (new-trie))
+(add-all-words *trie*)
+
+(defun clear-legal-moves ()
+  (setf *legal-moves* nil))
+
+(defun add-legal-move (tiles locs transposed)
+  ;(format t "A valid move:~%")
+  (setf tiles (word-to-string tiles))
+  ;(format t "~6T~A~%" tiles)
+  ;(format t "~6T~A~%" (if transposed (transpose-locs locs) locs))
+  (setf *legal-moves* (cons (list tiles (if transposed
+                                          (transpose-locs locs)
+                                          locs)) *legal-moves*)))
+
+(defun transpose-locs (locs)
+  (map 'list #'(lambda (loc) (list (second loc) (first loc))) locs))
+
+;;  IN-CROSS-CHECK-SET?
+;; ---------------------------
+;;  INPUTS: BOARD, a scrabble board
+;;          LETTER, a CHARACTER
+;;          ROW & COL, space to check
+
+(defun in-cross-check-set? (board letter row col)
+  (not (null (member letter (cross-checks-space board row col)
+                     :test #'char-equal))))
+
 ;;  COMPUTE-CROSS-CHECKS
 ;; --------------------------
 ;;  INPUTS: BOARD, a 2D array representing a scrabble board
@@ -129,25 +159,72 @@
                  (empty-space? board (1+ row) col)
                  (empty-space? board (1- row) col)))))
 
+(defun matrix-to-list (arr)
+  (loop for i below (array-dimension arr 0)
+        collect (loop for j below (array-dimension arr 1)
+                      collect (aref arr i j))))
+
+(defun list-to-2d-array (lst)
+  (make-array (list (length lst)
+                    (length (first lst)))
+              :initial-contents lst))
+
+(defun transpose-board! (game)
+  (let ((board (scrabble-board game))
+        (new-board (make-array '(15 15) :initial-element nil)))
+    (dotimes (row 15)
+      (dotimes (col 15)
+        (setf (aref new-board row col) (aref board col row))))
+    (dotimes (row 15)
+      (dotimes (col 15)
+        (if (not (empty-space? new-board row col))
+          (let ((tile (aref new-board row col)))
+            (setf (aref new-board row col)
+                  (make-tile :letter (tile-letter tile)
+                             :value (tile-value tile)
+                             :row (tile-col tile)
+                             :col (tile-row tile)))))))
+    (setf (scrabble-board game) new-board))
+  game)
+
+
 ;;  GENERATE-MOVES
 ;; -----------------------
 ;;  INPUTS: GAME, a SCRABBLE struct
 ;;  OUTPUT: A list of MOVEs that the current player can do
 
 (defun generate-moves (game)
-  (let ((board (scrabble-board g)))
+  (clear-legal-moves)
+  (generate-moves-helper game nil)
+  (transpose-board! game)
+  (generate-moves-helper game t)
+  (transpose-board! game)
+  *legal-moves*)
+
+(defun get-locs-from-word (word)
+  (map 'list #'(lambda (tile) (list (tile-row tile) (tile-col tile))) word))
+
+(defun generate-moves-helper (game transposed)
+  (let ((board (scrabble-board game)))
     ;; For each anchor
     (dolist (anchor (find-anchors board))
-      (let ((row (tile-row anchor))
-            (col (tile-col anchor)))
-        (if (not (empty-space? board (1- row) col))
+      ;(format t "Generating moves for anchor ~A~%" anchor)
+      (let ((row (first anchor))
+            (col (second anchor)))
+        (if (not (empty-space? board row (1- col)))
           ;; If the left part is already on the board
           (let ((left (get-word-left board row col)))
-            ;; extend right
-            )
+            (extend-right game
+                          left
+                          nil
+                          (get-locs-from-word left)
+                          (get-tr-node (word-to-string left) *trie*)
+                          (list row col)
+                          transposed))
           ;; Create all possible left parts
-          ;(left-part nil root-node (get-limit board row col))
-          )))))
+          (left-part game nil nil anchor (get-root-node *trie*)
+                     (get-limit board row col)
+                     transposed))))))
 
 ;;  GET-LIMIT
 ;; ---------------------
@@ -164,7 +241,110 @@
         ((< col 0) acc)
         (t (get-limit-acc board row (1- col) (1+ acc)))))
 
+;;  LEFT-PART
+;; -------------------------
+;;  INPUTS: GAME, a SCRABBLE struct
+;;          PARTIAL-WORD, a LIST of TILEs representing the already built part
+;;                        of the word
+;;          ANCHOR, the anchor square we are searching from
+;;          NODEY, the node we get to from PARTIAL-WORD
+;;          LIMIT, number of non-anchor squares next to the left of anchor
+;;  OUTPUT: ???
 
+(defun left-part (game partial-word partial-locs anchor nodey limit transposed)
+  (extend-right game partial-word nil
+                ;(append partial-locs (list (list 'L '])))
+                partial-locs
+                nodey anchor transposed)
+  (if (> limit 0)
+    ;; For each CHILD from NODEY
+    (dolist (child (get-children nodey *trie*))
+      ;; If the letter for CHILD is in our rack
+      (when (in-rack? game (tr-node-char child))
+        ;; Remove a tile corresponding to CHILD from our rack
+        (let ((tile (remove-from-rack! game
+                                       (get-from-rack game
+                                                      (tr-node-char child)))))
+          (left-part game
+                     (append partial-word (list tile))
+                     (if (null partial-locs)
+                       (list (list (first anchor) (1- (second anchor))))
+                       (cons (list (first (first partial-locs))
+                                   (1- (second (first partial-locs))))
+                             partial-locs))
+                     anchor child (1- limit)
+                     transposed)
+          ;; Put the tile back into the rack
+          (place-in-rack! game tile))))))
+
+;;  EXTEND-RIGHT
+;; ------------------------
+;;  INPUTS: GAME, a SCRABBLE struct
+;;          PARTIAL-WORD, a LIST of TILEs representing the already built part
+;;                        of the word
+;;          NODEY, the node we get to from PARTIAL-WORD
+;;          SQUARE, the current square we're examining
+;;  OUTPUTS: ??
+
+(defun extend-right (game prefix partial-word partial-locs nodey square
+                          transposed)
+  (when (not (off-board? (scrabble-board game) (first square) (second square)))
+    (if (and (empty-space? (scrabble-board game) (first square) (second square))
+             (not (off-board? (scrabble-board game)
+                              (first square)
+                              (second square))))
+      ;; if SQUARE is vacant then
+      (progn (when (and (tr-node-is-word nodey)
+                        (not (null partial-word)))
+               ;; if NODEY is a terminal node then
+               ;; LegalMove(PartialWord)
+               (add-legal-move (append prefix partial-word) partial-locs
+                               transposed))
+             (dolist (child (get-children nodey *trie*))
+               ;; If CHILD is in our rack...
+               (if (and (in-rack? game (tr-node-char child))
+                        ;; ...and CHILD is in the cross check set for SQUARE
+                        (in-cross-check-set? (scrabble-board game)
+                                             (tr-node-char child)
+                                             (first square) (second square)))
+                 (progn
+                   ;; Remove the corresponding tile for CHILD from rack
+                   (let ((tile (remove-from-rack!
+                                 game
+                                 (get-from-rack game
+                                                (tr-node-char child))))
+                         ;; Let the next square be the square to the
+                         ;; right of square
+                         (next-square (list
+                                        (first square)
+                                        (1+ (second square)))))
+                     (extend-right game
+                                   prefix
+                                   (append partial-word (list tile))
+                                   (append partial-locs
+                                           (list
+                                             (list (first square)
+                                                   (second square))))
+                                   child
+                                   next-square
+                                   transposed)
+                     ;; Put the tile back into the rack
+                     (place-in-rack! game tile))))))
+      (progn
+        (let ((tile (tile-from-loc
+                      (scrabble-board game) (first square) (second square))))
+          (when (not (null (get-child-char nodey (tile-letter tile) *trie*)))
+            (let ((next-square (list (first square) 
+                                     (1+ (second square)))))
+              (extend-right game
+                            prefix
+                            (append partial-word (list tile))
+                            (append partial-locs
+                                    (list (list (first square)
+                                                (second square))))
+                            (get-child-char nodey (tile-letter tile) *trie*)
+                            next-square
+                            transposed))))))))
 
 ;; FIND-BEST-MOVE
 ;; ---------------------

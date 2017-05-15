@@ -2,29 +2,74 @@
 ;; PLAY-SCR.LISP
 ;; ========================
 
+;;  DO-RANDOM-MOVE!
+;; ----------------------
+
+(defun do-random-move! (game)
+  (let* ((moves (generate-moves game))
+         (move (nth (random (length moves)) moves))
+         (word (first move))
+         (locs (second move)))
+    (do-move! g t word locs))
+  game)
+
+
 ;;  DO-MOVE!
 ;; ----------------------
 ;;  INPUTS: GAME, a SCRABBLE struct
 ;;          CHECK-LEGAL?, T if we should check if the move is legal
-;;          WORD, a STRING representing the letters (including on board)
-;;          LOCS, a list of locations (including tiles on board)
+;;          WORD, a STRING representing the letters (not on board yet)
+;;          LOCS, a list of locations (not including on board)
 ;;  OUTPUTS: The score for the given move
 ;;  SIDE-EFFECT: Modifies GAME to include TILES on the board and modifies
 ;;               each TILE to include it's position
 
 (defun do-move! (game check-legal? word locs)
-  (let ((tiles (tiles-from-string game word)))
+  (let ((new-tiles (get-new-tiles game word locs))
+        (new-locs (get-new-locs game locs)))
     (if (or (not check-legal?)
-            (is-legal? game tiles locs))
+            (is-legal? game word locs))
       (progn 
-        (place-all-tiles! (scrabble-board game) tiles locs)
+        (place-all-tiles! (scrabble-board game) new-tiles new-locs)
         (refill-racks! game)
-        (let ((score (score (scrabble-board game) tiles)))
+        (format t "tiles:: ~A~%" new-tiles)
+        (let ((score (score (scrabble-board game) new-tiles)))
           (incf (svref (scrabble-score game) (whose-turn game))
                 score)
           (setf (scrabble-whose-turn game) (- 1 (whose-turn game)))
           score))
       (format t "INVALID MOVE!~%"))))
+
+(defun get-new-locs (game locs)
+  (get-new-locs-acc game locs nil))
+
+(defun get-new-locs-acc (game locs acc)
+  (cond ((null locs) acc)
+        ((empty-space? (scrabble-board game)
+                       (first (first locs))
+                       (second (first locs)))
+         (get-new-locs-acc game (rest locs)
+                           (append acc (list (first locs)))))
+        (t (get-new-locs-acc game (rest locs) acc))))
+
+
+(defun get-new-tiles (game word locs)
+  (get-new-tiles-acc game (coerce word 'list) locs nil))
+
+(defun get-new-tiles-acc (game word locs acc)
+  (cond ((null word) acc)
+        ((empty-space? (scrabble-board game)
+                       (first (first locs))
+                       (second (first locs)))
+         (get-new-tiles-acc game (rest word) (rest locs)
+                            (append acc (list (get-from-rack game
+                                                              (first word))))))
+        (t (get-tiles-move-acc game (rest word) (rest locs) acc))))
+        ;(t (get-tiles-move-acc game (rest word) (rest locs)
+                               ;(append acc (list (tile-from-loc
+                                                   ;(scrabble-board g)
+                                                   ;(first (first locs))
+                                                   ;(second (first locs)))))))))
 
 ;;  PLACE-ALL-TILES!
 ;; -----------------------
@@ -52,11 +97,11 @@
 ;;          LOCS
 ;;  OUTPUTS: t if the move is legal, NIL otherwise
 
-(defun is-legal? (game tiles locs)
+(defun is-legal? (game word locs)
   (if (empty-board? (scrabble-board game))
     (and (valid-first-word? locs)
-         (is-a-word? tiles))
-    (is-a-word? tiles)))
+         (is-word? word *trie*))
+    (is-word? word *trie*)))
 
 ;;  VALID-FIRST-WORD?
 ;; --------------------------
@@ -229,11 +274,13 @@
 
 (defun get-new-words-acc (board new-tiles acc)
   (cond ((null new-tiles) (remove-duplicates acc :test #'equal))
-        (t (get-new-words-acc
-             board
-             (rest new-tiles)
-             (append acc
-                     (get-words-at-tile board (first new-tiles)))))))
+        (t 
+          ;(format t "first new tiles: ~A~%" (first new-tiles))
+          (get-new-words-acc
+            board
+            (rest new-tiles)
+            (append acc
+                    (get-words-at-tile board (first new-tiles)))))))
 
 ;;  GET-WORDS-AT-TILE
 ;; -----------------------
@@ -313,8 +360,8 @@
   (let ((dims (array-dimensions board)))
     (or (< row 0)
         (< col 0)
-        (> row (first dims))
-        (> col (second dims)))))
+        (>= row (first dims))
+        (>= col (second dims)))))
 
 ;;  EMPTY-SPACE?
 ;; -------------------------
