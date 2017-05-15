@@ -199,10 +199,10 @@
 ;;  OUTPUT: A list of MOVEs that the current player can do
 
 (defun generate-moves (game)
-  (when (empty-board? (scrabble-board g))
+  (clear-legal-moves)
+  (when (empty-board? (scrabble-board game))
     (extend-right game nil nil nil (get-root-node *trie*) '(7 7) nil)
     (return-from generate-moves *legal-moves*))
-  (clear-legal-moves)
   (generate-moves-helper game nil)
   (transpose-board! game)
   (generate-moves-helper game t)
