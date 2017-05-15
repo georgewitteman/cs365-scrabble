@@ -354,6 +354,7 @@
                             next-square
                             transposed))))))))
 
+
 ;; FIND-BEST-MOVE
 ;; ---------------------
 ;; INPUT: GAME, a SCRABBLE struct
@@ -374,24 +375,29 @@
 	(locs-list ())
 	(tiles-list ())
 	)
+    (format t "move list ~A" move-list)
     (dolist (movie move-list)
       (setf movie-len (length movie))
-
+      (format t "dotimes")
       (dotimes (i movie-len)
-	
-	(setf letter (nth i (first movie)))
+	(format t " dotime i ~A" i)
+	(setf letter (char (first movie) i))
 	(setf r (first (nth i (second movie))))
 	(setf c (second (nth i (second movie))))
 	(format t "letter ~A r ~A c ~A~%" letter r c)
+
 	;; Check if each letter already on board
 	(when (empty-space? board r c)
+	  (format t "are we here right before?")
 	  ;; Create and add this tile to TILES-LIST
 	  (setf a-tile (make-tile :letter letter
-				  :value (svref *letter-val-array* (position letter *letters-array*))
+				  :value (aref *letter-val-array* 
+						(position letter *letters-array* :test #'char-equal))
 				  :row r
 				  :col c))
+	  (format t "or here right after?~%")
 	  (format t "a-tile ~A~%" a-tile)
-	  (cons a-tile tiles-list)))
+	  (setf tiles-list (cons a-tile tiles-list))))
 
       ;; Do-move! on GAMEY (copy of game)
       (do-move! gamey nil (first movie) (second movie))
@@ -399,9 +405,11 @@
       (format t "best move ~A score ~A" best-move best-score)
       (setf curr-score (score-word (scrabble-board gamey) tiles-list))
       ;; Update best score
+      (format t "maybe we are here?")
       (when (or (> curr-score best-score) (and (= curr-score best-score)
 					     (> (length (second movie))
 						(length (second best-move)))))
+	(format t "or here.... ~%")
 	(setf best-move movie)
 	(setf best-score curr-score))
       (format t "best move ~A best score ~A~%" best-move best-score)
