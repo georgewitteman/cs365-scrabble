@@ -4,11 +4,11 @@
 ;; =====================
 
 ;; Useful for quickly turning off debug printing
-(defconstant *debugging* t)
+(defparameter *debugging* t)
 
 ;; List of all letters in the alphabet as CHARACTERS
-(defconstant *letters-list*
-             (list #\A #\B #\C #\D #\E
+(defparameter *letters-list*
+              (list #\A #\B #\C #\D #\E
                    #\F #\G #\H #\I #\J
                    #\K #\L #\M #\N #\O
                    #\P #\Q #\R #\S #\T
@@ -16,8 +16,8 @@
                    #\Z))
 
 ;; An array made up from *LETTERS-LIST*
-(defconstant *letters-array*
-             (make-array 26 :initial-contents *letters-list*))
+(defparameter *letters-array*
+              (make-array 26 :initial-contents *letters-list*))
 
 (defparameter *files*
   (list
