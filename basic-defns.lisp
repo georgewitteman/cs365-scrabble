@@ -214,7 +214,8 @@
         (let ((el (aref board i j)))
           (if (tile-p el)
             ;; Print tiles on the board with a yellow bg and black text
-            (format str "~c[43m~c[30m~2A~c[0m " #\ESC #\ESC el #\ESC)
+            (format str "~2A " el)
+            ;(format str "~c[43m~c[30m~2A~c[0m " #\ESC #\ESC el #\ESC)
             (format str "~3A" el))))
       (format str "~%"))
     (format str "~%")

@@ -4,31 +4,31 @@
 
 
 (defun begin-scrabble ()
-  (format t "~%~%
-==========================================================================
-Welcome to Scrabble! 
-==========================================================================
-To begin, set (new-scrabble) equal to variable, ie (setf g (new-scrabble))
-To read the rules, use the RULES function, ie type (rules)
-To see a list of functions, use the COMMANDS function, ie type (commands) 
---------------------------------------------------------------------------~%~%"))
+ (format t "~%~%
+  ==========================================================================
+  Welcome to Scrabble! 
+  ==========================================================================
+  To begin, set (new-scrabble) equal to variable, ie (setf g (new-scrabble))
+  To read the rules, use the RULES function, ie type (rules)
+  To see a list of functions, use the COMMANDS function, ie type (commands) 
+  --------------------------------------------------------------------------~%~%"))
 
 (defun rules ()
-  (format t "~%~%
-----------------------------------------------------------------------------------
-RULES
-----------------------------------------------------------------------------------~%~%")
-  (format t 
-"The goal of Scrabble is to score as many points as possible by placing tiles on
-the board to create words. Each player has a rack of 7 tiles. Players take turns 
-moving, where for each move a player can either build a word (DO-MOVE!),
-pass their turn (PASS!), or trade in some amount of their tiles (TRADE-IN!). 
-For information on these functions, use the COMMANDS function. GENERATE-MOVES 
-shows all possible words you can build. The game ends when either one player runs out
-of tiles or neither player can build a word.
+ (format t "~%~%
+  ----------------------------------------------------------------------------------
+  RULES
+  ----------------------------------------------------------------------------------~%~%")
+ (format t 
+  "The goal of Scrabble is to score as many points as possible by placing tiles on
+  the board to create words. Each player has a rack of 7 tiles. Players take turns 
+  moving, where for each move a player can either build a word (DO-MOVE!),
+  pass their turn (PASS!), or trade in some amount of their tiles (TRADE-IN!). 
+  For information on these functions, use the COMMANDS function. GENERATE-MOVES 
+  shows all possible words you can build. The game ends when either one player runs out
+  of tiles or neither player can build a word.
 
-Note: To simplify this game, we make it a 2-Player game and remove blank tiles.
-----------------------------------------------------------------------------------~% ~%"))
+  Note: To simplify this game, we make it a 2-Player game and remove blank tiles.
+  ----------------------------------------------------------------------------------~% ~%"))
 
 
 (defun commands ()
@@ -53,4 +53,3 @@ INPUT: GAME, a SCRABBLE struct.
 OUTPUT: GAME modified so that it is the other player's turn.~%")
   (format t "
 --------------------------------------------------------------------------------------------------------~~%~%"))
-
