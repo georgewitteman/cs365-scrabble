@@ -47,7 +47,7 @@
           (setf (aref checks row col)
                 (cross-checks-space board row col))
           (setf (aref checks row col)
-                '---))))
+                *letters-list*))))
     checks))
 
 ;;  CROSS-CHECKS-SPACE
@@ -62,14 +62,19 @@
         (word-above (tiles-to-chars (get-word-above board row col)))
         (word-below (tiles-to-chars (get-word-below board row col))))
     (if (and (null word-above) (null word-below))
-      (setf checks '+++)
-      )
+      (setf checks *letters-list*))
     ;; Check the dictionary for what letters can be
     ;; between word-above & word-below
-    ;(dolist (letter *letters-list*))
-    ;(when (in-trie? *trie* (append word-above (list letter) word-below))
-    ;(cons letter checks))
+    (dolist (letter *letters-list*)
+      (when (is-word? (coerce (append
+                                     word-above
+                                     (list letter)
+                                     word-below)
+                                   'string)
+                      *trie*)
+        (setf checks (cons letter checks))))
     checks))
+
 
 ;;  GET-VERTICAL-WORD
 ;; -------------------------
@@ -89,7 +94,7 @@
              (+ row delt)
              col delt
              (cons (aref board row col) acc)))))
-  
+
 ;; Some useful helpers..
 (defun get-word-above (board row col)
   (get-vertical-word board (1- row) col -1))
@@ -334,7 +339,7 @@
         (let ((tile (tile-from-loc
                       (scrabble-board game) (first square) (second square))))
           (when (not (null (get-child-char nodey (tile-letter tile) *trie*)))
-            (let ((next-square (list (first square) 
+            (let ((next-square (list (first square)
                                      (1+ (second square)))))
               (extend-right game
                             prefix
@@ -368,9 +373,9 @@
 	)
     (dolist (movie move-list)
       (setf movie-len (length movie))
-      
+
       (dotimes (i movie-len)
-	
+
 	(setf letter (nth i (first movie)))
 	(setf r (first (nth i (second movie))))
 	(setf c (second (nth i (second movie))))
@@ -383,13 +388,13 @@
 				  :row r
 				  :col c))
 	  (cons a-tile tiles-list)))
-      
+
       ;; Do-move! on GAMEY (copy of game)
-      (do-move! gamey nil (first movie) (second movie))      
+      (do-move! gamey nil (first movie) (second movie))
       ;; Score-word
       (setf curr-score (score-word (scrabble-board gamey) tiles-list))
       ;; Update best score
-      (when (or (> curr-score best-score) (and (= curr-score best-score) 
+      (when (or (> curr-score best-score) (and (= curr-score best-score)
 					     (> (length (second movie))
 						(length (second best-move)))))
 	(setf best-move movie)
@@ -408,20 +413,6 @@
     (do-move! game nil (first movie) (second movie))))
 
 
-;; DO-RANDOM-MOVE!
-;; ----------------------
-;; INPUT: GAME, a Scrabble stuct
-;; OUTPUT: GAME modified so that a random move is played
-
-(defun do-random-move! (game)
-  (let* ((move-list (generate-moves game))
-	 (num-moves (length move-list))
-	 (randy (random num-moves))
-	 (movie (nth randy move-list)))
-    (do-move! game nil (first movie) (second movie))))
-
-
-	
 ;; MOVIE = ("string" ((r c) (r c) (r c)))
 ;; MOVIE-S = (tile_1 tile_2 ... tile_n) **not including tiles on board
 ;; MOVIE-DM = "string" and ((r c) (r c) (r c))

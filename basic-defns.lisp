@@ -8,8 +8,9 @@
 (defparameter *files*
   (list "basic-defns"
         "play-scrabble"
-        ;"move-generation"
+        "move-generation"
         "begin"
+        "trie"
 	))
 
 ;;  CL
@@ -49,11 +50,11 @@
                    #\U #\V #\W #\X #\Y
                    #\Z))
 
-(defconstant *letters-array* 
+(defconstant *letters-array*
              (make-array 26 :initial-contents *letters-list*))
 
-(defconstant *initial-tiles-left-array* 
-             (make-array 26 :initial-contents 
+(defconstant *initial-tiles-left-array*
+             (make-array 26 :initial-contents
                          ;;A B C D E  F G H I J K L M N O P Q R S T U V W X Y Z
                          '(9 2 2 4 12 2 3 2 9 1 1 4 2 6 8 2 1 6 4 6 4 2 2 1 2 1)))
 
@@ -106,7 +107,7 @@
 (defstruct (scrabble (:print-function print-scrabble))
   board          ; a 15x15 array
   whose-turn     ; *ply0* or *ply1*
-  rack_0         ; a LIST of TILEs 
+  rack_0         ; a LIST of TILEs
   rack_1         ; "
   bag            ; a LIST of TILEs representing the tiles left in the bag
   num-tiles-left ; number of tiles left in the bag
@@ -164,7 +165,7 @@
 ;;  COPY-ARRAY
 ;; -----------------
 ;;  INPUT: ARR, an ARRAY
-;;  OUTPUT: A copy 
+;;  OUTPUT: A copy
 
 (defun copy-array (arr)
   (let ((dims (array-dimensions arr)))
@@ -183,7 +184,7 @@
                  :rack_0 (copy-list (scrabble-rack_0 game))
                  :rack_1 (copy-list (scrabble-rack_1 game))
                  :bag (copy-list (scrabble-bag game))
-                 :num-tiles-left (scrabble-tiles-left game)
+                 :num-tiles-left (scrabble-num-tiles-left game)
                  :score (copy-array (scrabble-score game))))
 
 ;;  PRINT-SCRABBLE
@@ -244,7 +245,7 @@
           (rem 0))
       (format str "Letters: ")
       (dotimes (i 26)
-        (setf letter (svref *letters-array* i)) 
+        (setf letter (svref *letters-array* i))
         (format str "~2A" letter))
       (format str "~%Values:  ")
       (dotimes (i 26)
@@ -275,10 +276,10 @@
 
 ;;  NTH-ELT-INDEX-ACC
 ;; -----------------
-;;  INPUT: ARR, an array of integers 
+;;  INPUT: ARR, an array of integers
 ;;         N, non-negative integer
 ;;         I, current index
-;;         ACC, accumulator 
+;;         ACC, accumulator
 ;;  OUTPUT: An index of where the nth element is
 
 (defun nth-elt-index-acc (arr n i acc)
@@ -296,7 +297,7 @@
 ;;  NTH-ELT-INDEX
 ;; -----------------
 ;;  INPUT: ARR, N
-;;  OUTPUT: An index where nth element is in array 
+;;  OUTPUT: An index where nth element is in array
 ;;  (wrapper function for NTH-ELT-INDEX)
 
 (defun nth-elt-index (arr n)

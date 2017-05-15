@@ -29,7 +29,7 @@
         (new-locs (get-new-locs game locs)))
     (if (or (not check-legal?)
             (is-legal? game word locs))
-      (progn 
+      (progn
         (place-all-tiles! (scrabble-board game) new-tiles new-locs)
         (refill-racks! game)
         (format t "tiles:: ~A~%" new-tiles)
@@ -64,12 +64,7 @@
          (get-new-tiles-acc game (rest word) (rest locs)
                             (append acc (list (get-from-rack game
                                                               (first word))))))
-        (t (get-tiles-move-acc game (rest word) (rest locs) acc))))
-        ;(t (get-tiles-move-acc game (rest word) (rest locs)
-                               ;(append acc (list (tile-from-loc
-                                                   ;(scrabble-board g)
-                                                   ;(first (first locs))
-                                                   ;(second (first locs)))))))))
+        (t (get-new-tiles-acc game (rest word) (rest locs) acc))))
 
 ;;  PLACE-ALL-TILES!
 ;; -----------------------
@@ -129,7 +124,7 @@
 
 ;; Some Tests
 ;; (is-word? (list
-;;   (make-tile :letter #\A :row 0 :col 0) 
+;;   (make-tile :letter #\A :row 0 :col 0)
 ;;   (make-tile :letter #\A :row 1 :col 0)
 ;;   (make-tile :letter #\H :row 2 :col 0)))
 
@@ -274,7 +269,7 @@
 
 (defun get-new-words-acc (board new-tiles acc)
   (cond ((null new-tiles) (remove-duplicates acc :test #'equal))
-        (t 
+        (t
           ;(format t "first new tiles: ~A~%" (first new-tiles))
           (get-new-words-acc
             board
@@ -456,11 +451,11 @@
     (setf (scrabble-rack_1 game)
           (cons tile (scrabble-rack_1 game)))))
 
-;;  REMOVE-FROM-RACK! 
+;;  REMOVE-FROM-RACK!
 ;; ------------------------
 ;;  INPUT: GAME, a SCRABBLE struct
 ;;         TILE, a TILE struct
-;;  OUTPUT: A tile of that LETTER 
+;;  OUTPUT: A tile of that LETTER
 ;;  SIDE EFFECT: Modifies GAME by removing tile from the rack
 
 (defun remove-from-rack! (game tile)
@@ -520,12 +515,12 @@
 	 (len (length initial-rack))
 	 (lis-len (length listy))
 	 (new-rack '()))
-    
+
     ;; If it is Player 1's turn, reset rack
     (when (equal (whose-turn game) *ply1*)
       (setf initial-rack (scrabble-rack_1 game))
       (setf len (length initial-rack)))
-    
+
     ;; Add each letter in rack to bag or NEW-RACK
     (dotimes (i len)
       (when (not (equal i (first listy)))
@@ -533,7 +528,7 @@
       (when (equal i (first listy))
 	(setf listy (rest listy))
 	(setf (scrabble-bag game) (cons (nth i initial-rack) (scrabble-bag game)))))
-    
+
     ;; Set NEW-RACK
     (if (equal (whose-turn game) *ply0*)
 	(setf (scrabble-rack_0 game) new-rack)
@@ -541,16 +536,16 @@
 
     ;; Shake the bag
     (shake-bag! game)
-    
+
     ;; Put new tiles into the rack
     (pick-tiles! game (whose-turn game) lis-len)
 
     ;; Print scrabble
     (print-scrabble game t 0)
-    
+
     ;; Toggle turns
     (pass! game)
-    
+
     game))
 
 
