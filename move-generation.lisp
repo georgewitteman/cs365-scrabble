@@ -1,30 +1,7 @@
+
+;; =====================
 ;;  MOVE-GENERATION.LISP
 ;; =====================
-
-(defparameter *legal-moves* nil)
-
-(defparameter *trie* (new-trie))
-(add-all-words *trie*)
-
-(defun clear-legal-moves ()
-  (setf *legal-moves* nil))
-
-(defun add-legal-move (tiles locs)
-  (format t "A valid move:~%")
-  (setf tiles (word-to-string tiles))
-  (format t "~6T~A~%" tiles)
-  (format t "~6T~A~%" locs)
-  (setq *legal-moves* (cons (list tiles locs) *legal-moves*)))
-
-;;  IN-CROSS-CHECK-SET?
-;; ---------------------------
-;;  INPUTS: BOARD, a scrabble board
-;;          LETTER, a CHARACTER
-;;          ROW & COL, space to check
-
-(defun in-cross-check-set? (board letter row col)
-  (not (null (member letter (cross-checks-space board row col)
-                     :test #'char-equal))))
 
 ;;  COMPUTE-CROSS-CHECKS
 ;; --------------------------
@@ -40,7 +17,7 @@
           (setf (aref checks row col)
                 (cross-checks-space board row col))
           (setf (aref checks row col)
-                *letters-list*))))
+                '---))))
     checks))
 
 ;;  CROSS-CHECKS-SPACE
@@ -55,26 +32,14 @@
         (word-above (tiles-to-chars (get-word-above board row col)))
         (word-below (tiles-to-chars (get-word-below board row col))))
     (if (and (null word-above) (null word-below))
-      (setf checks *letters-list*))
+      (setf checks '+++)
+      )
     ;; Check the dictionary for what letters can be
     ;; between word-above & word-below
-    (dolist (letter *letters-list*)
-      (when (is-word? (coerce (append
-                                     word-above
-                                     (list letter)
-                                     word-below)
-                                   'string)
-                      *trie*)
-        (setf checks (cons letter checks))))
+    ;(dolist (letter *letters-list*))
+    ;(when (in-trie? *trie* (append word-above (list letter) word-below))
+    ;(cons letter checks))
     checks))
-
-(defun is-word-chars (word)
-  (let ((word-str ""))
-    (dolist (til word)
-      (setf word-str (concatenate 'string word-str (string til))))
-    (if (null (position word-str *ospd* :test #'word-equal?))
-      nil
-      t)))
 
 ;;  GET-VERTICAL-WORD
 ;; -------------------------
@@ -170,27 +135,19 @@
 ;;  OUTPUT: A list of MOVEs that the current player can do
 
 (defun generate-moves (game)
-  (let ((board (scrabble-board game)))
+  (let ((board (scrabble-board g)))
     ;; For each anchor
     (dolist (anchor (find-anchors board))
-      (format t "Generating moves for anchor ~A~%" anchor)
-      (let ((row (first anchor))
-            (col (second anchor)))
-        (if (not (empty-space? board row (1- col)))
+      (let ((row (tile-row anchor))
+            (col (tile-col anchor)))
+        (if (not (empty-space? board (1- row) col))
           ;; If the left part is already on the board
           (let ((left (get-word-left board row col)))
-            (extend-right game
-                          left
-                          nil
-                          (get-locs-from-word left)
-                          (get-tr-node (word-to-string left) *trie*)
-                          (list row col)))
+            ;; extend right
+            )
           ;; Create all possible left parts
-          (left-part game nil nil anchor (get-root-node *trie*)
-                     (get-limit board row col)))))))
-
-(defun get-locs-from-word (word)
-  (map 'list #'(lambda (tile) (list (tile-row tile) (tile-col tile))) word))
+          ;(left-part nil root-node (get-limit board row col))
+          )))))
 
 ;;  GET-LIMIT
 ;; ---------------------
@@ -207,124 +164,84 @@
         ((< col 0) acc)
         (t (get-limit-acc board row (1- col) (1+ acc)))))
 
-;;  LEFT-PART
-;; -------------------------
-;;  INPUTS: GAME, a SCRABBLE struct
-;;          PARTIAL-WORD, a LIST of TILEs representing the already built part
-;;                        of the word
-;;          ANCHOR, the anchor square we are searching from
-;;          NODEY, the node we get to from PARTIAL-WORD
-;;          LIMIT, number of non-anchor squares next to the left of anchor
-;;  OUTPUT: ???
 
-(defun left-part (game partial-word partial-locs anchor nodey limit)
-  (extend-right game partial-word nil
-                partial-locs nodey anchor)
-  (if (> limit 0)
-    ;; For each CHILD from NODEY
-    (dolist (child (get-children nodey *trie*))
-      ;; If the letter for CHILD is in our rack
-      (when (in-rack? game (tr-node-char child))
-        ;; Remove a tile corresponding to CHILD from our rack
-        (let ((tile (remove-from-rack! game
-                                       (get-from-rack game
-                                                      (tr-node-char child)))))
-          (left-part game
-                     (append partial-word (list tile))
-                     (if (null partial-locs)
-                       (list (list (first anchor) (1- (second anchor))))
-                       (cons (list (first (first partial-locs))
-                                   (1- (second (first partial-locs))))
-                             partial-locs))
-                     anchor child (1- limit))
-          ;; Put the tile back into the rack
-          (place-in-rack! game tile))))))
 
-;;  EXTEND-RIGHT
+;; FIND-BEST-MOVE
+;; ---------------------
+;; INPUT: GAME, a SCRABBLE struct
+;; OUTPUT: A list containing a string and a list of positions
+
+(defun find-best-move (game)
+  (let ((move-list (generate-moves game))
+	(gamey (copy-game game))
+	(board (scrabble-board game))
+	(best-move ())
+	(best-score 0)
+	(curr-score 0)
+	(movie-len 0)
+	(letter 0)
+	(r 0)
+	(c 0)
+	(a-tile 0)
+	(locs-list ())
+	(tiles-list ())
+	)
+    (dolist (movie move-list)
+      (setf movie-len (length movie))
+      
+      (dotimes (i movie-len)
+	
+	(setf letter (nth i (first movie)))
+	(setf r (first (nth i (second movie))))
+	(setf c (second (nth i (second movie))))
+
+	;; Check if each letter already on board
+	(when (empty-space? board r c)
+	  ;; Create and add this tile to TILES-LIST
+	  (setf a-tile (make-tile :letter letter
+				  :value (svref *letter-val-array* (position letter *letters-array*))
+				  :row r
+				  :col c))
+	  (cons a-tile tiles-list)))
+      
+      ;; Do-move! on GAMEY (copy of game)
+      (do-move! gamey nil (first movie) (second movie))      
+      ;; Score-word
+      (setf curr-score (score-word (scrabble-board gamey) tiles-list))
+      ;; Update best score
+      (when (or (> curr-score best-score) (and (= curr-score best-score) 
+					     (> (length (second movie))
+						(length (second best-move)))))
+	(setf best-move movie)
+	(setf best-score curr-score))
+      (setf gamey (copy-game game)))
+    best-move))
+
+;; DO-BEST-MOVE!
 ;; ------------------------
-;;  INPUTS: GAME, a SCRABBLE struct
-;;          PARTIAL-WORD, a LIST of TILEs representing the already built part
-;;                        of the word
-;;          NODEY, the node we get to from PARTIAL-WORD
-;;          SQUARE, the current square we're examining
-;;  OUTPUTS: ??
-
-(defun extend-right (game prefix partial-word partial-locs nodey square)
-  ;(format t "Checking square: ~A~%" square)
-  (if (empty-space? (scrabble-board game) (first square) (second square))
-    ;; if SQUARE is vacant then
-    (progn (when (and (tr-node-is-word nodey)
-                      (not (null partial-word)))
-             ;; if NODEY is a terminal node then
-             ;; LegalMove(PartialWord)
-             (add-legal-move (append prefix partial-word) partial-locs))
-           (dolist (child (get-children nodey *trie*))
-             ;; If CHILD is in our rack...
-             (if (and (in-rack? game (tr-node-char child))
-                      ;; ...and CHILD is in the cross check set for SQUARE
-                      (in-cross-check-set? (scrabble-board game)
-                                           (tr-node-char child)
-                                           (first square) (second square)))
-               (progn
-                 ;; Remove the corresponding tile for CHILD from rack
-                 (let ((tile (remove-from-rack!
-                               game
-                               (get-from-rack game
-                                              (tr-node-char child))))
-                       ;; Let the next square be the square to the
-                       ;; right of square
-                       (next-square (list
-                                      (first square)
-                                      (1+ (second square)))))
-                   (extend-right game
-                                 prefix
-                                 (append partial-word (list tile))
-                                 (append partial-locs
-                                         (list
-                                           (list (first square)
-                                                 (second square))))
-                                 child
-                                 next-square)
-                   ;; Put the tile back into the rack
-                   (place-in-rack! game tile))))))
-    (progn
-      (let ((tile (tile-from-loc
-                    (scrabble-board game) (first square) (second square))))
-        (when (not (null (get-child-char nodey (tile-letter tile) *trie*)))
-          (let ((next-square (list (first square) 
-                                   (1+ (second square)))))
-            (extend-right game
-                          prefix
-                          (append partial-word (list tile))
-                          (append partial-locs
-                                  (list (list (first square)
-                                              (second square))))
-                          (get-child-char nodey (tile-letter tile) *trie*)
-                          next-square)))))))
-
-             
+;; INPUT: GAME, a Scrabble struct
+;; OUTPUT: GAME modified so that best move is played
 
 
+(defun do-best-move! (game)
+  (let ((movie (find-best-move game)))
+    (do-move! game nil (first movie) (second movie))))
 
 
+;; DO-RANDOM-MOVE!
+;; ----------------------
+;; INPUT: GAME, a Scrabble stuct
+;; OUTPUT: GAME modified so that a random move is played
+
+(defun do-random-move! (game)
+  (let* ((move-list (generate-moves game))
+	 (num-moves (length move-list))
+	 (randy (random num-moves))
+	 (movie (nth randy move-list)))
+    (do-move! game nil (first movie) (second movie))))
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+	
+;; MOVIE = ("string" ((r c) (r c) (r c)))
+;; MOVIE-S = (tile_1 tile_2 ... tile_n) **not including tiles on board
+;; MOVIE-DM = "string" and ((r c) (r c) (r c))

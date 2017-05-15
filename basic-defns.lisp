@@ -9,7 +9,8 @@
   (list "basic-defns"
         "play-scrabble"
         ;"move-generation"
-        ))
+        "begin"
+	))
 
 ;;  CL
 ;; ----------------------
@@ -286,6 +287,7 @@
 ;;  OUTPUT: A SCRABBLE struct representing a new game
 
 (defun new-scrabble ()
+  (begin-scrabble)
   (let ((game (make-scrabble
                 :board (copy-array *initial-board*)
                 :whose-turn *ply0*
