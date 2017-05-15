@@ -35,6 +35,10 @@
                 (-- dw -- -- -- tl -- -- -- tl -- -- -- dw --)
                 (tw -- -- dl -- -- -- tw -- -- -- dl -- -- tw))))
 
+(defparameter *legal-moves* nil)
+
+(defparameter *trie* (new-trie))
+(add-all-words *trie*)
 
 ;;  The MOVE struct
 ;; ----------------------
@@ -43,7 +47,6 @@
   tiles      ; A list of TILE structs
   locations  ; A list of locations ('(row col))
   )
-
 
 ;;  The TILE struct
 ;; -----------------------
@@ -54,8 +57,6 @@
   row    ; position of the tile, NIL if not yet on the board
   col    ; "
   )
-
-;; NOTE: A WORD as referenced in these files is a LIST of TILEs
 
 ;;  The SCRABBLE struct
 ;; ---------------------
@@ -117,7 +118,6 @@
 (defun whose-turn (game)
   (scrabble-whose-turn game))
 
-
 ;;  COPY-ARRAY
 ;; -----------------
 ;;  INPUT: ARR, an ARRAY
@@ -142,7 +142,6 @@
                  :bag (copy-list (scrabble-bag game))
                  :num-tiles-left (scrabble-num-tiles-left game)
                  :score (copy-seq (scrabble-score game))))
-
 
 ;;  PRINT-SCRABBLE
 ;; -----------------
@@ -259,7 +258,6 @@
 (defun nth-elt-index (arr n)
   (nth-elt-index-acc arr n 0 n))
 
-
 ;;  SHAKE-BAG!
 ;; ------------------
 ;;  INPUT: GAME, a scrabble struct
@@ -309,18 +307,12 @@
 ;;               each TILE to include it's position
 
 (defun do-move! (game check-legal? word locs)
-  ;(format t "Doing move: (player: ~A, word: ~A, locs: ~A)~%" 
-  ;(if (= (whose-turn game) 0)
-  ;"*plyr1*"
-  ;"*plyr2*")
-  ;word locs)
   (let ((new-tiles (get-new-tiles game word locs))
         (new-locs (get-new-locs game locs)))
     (when (or (not check-legal?)
               (is-legal? game word locs))
       (place-all-tiles! game new-tiles new-locs)
       (refill-racks! game)
-      ;(format t "tiles:: ~A~%" new-tiles)
       (let ((score (score (scrabble-board game) new-tiles)))
         (incf (svref (scrabble-score game) (whose-turn game))
               score)
@@ -363,7 +355,6 @@
         ((empty-space? (scrabble-board game)
                        (first (first locs))
                        (second (first locs)))
-         ;(format t "empty-space~%")
          (get-new-tiles-acc game (rest word) (rest locs)
                             (append acc (list (get-from-rack game
                                                              (first word))))))
@@ -464,12 +455,10 @@
 ;;  OUTPUT: The score for the given move
 
 (defun score (board new-tiles)
-  ;(format t "Score ~A~%" new-tiles)
   (let ((score (score-words board (get-new-words board new-tiles) new-tiles)))
     (when (= (length new-tiles) 7)
       ;; BINGO!
       (setf score (+ score 50)))
-    ;(format t "Total score for ~A: ~A~%" new-tiles score)
     score))
 
 ;;  SCORE-WORDS
@@ -502,17 +491,8 @@
 
 (defun score-word-acc (board word score new-tiles)
   (cond ((null word)
-         ;(format t "~%")
          score)
-        (t ;(format t "~A(~A*~A[~A][~A->~A]) + "
-          ;        (first word)
-          ;        (tile-value (first word))
-          ;        (get-tile-multiplier (first word) new-tiles)
-          ;        (* (get-tile-multiplier (first word) new-tiles)
-          ;           (tile-value (first word)))
-          ;        score
-          ;        (+ score (* (get-tile-multiplier (first word) new-tiles)
-          ;                    (tile-value (first word)))))
+        (t
           (score-word-acc board (rest word)
                           (+ score (* (get-tile-multiplier (first word)
                                                            new-tiles)
@@ -817,7 +797,6 @@
 
     game))
 
-
 ;; PASS!
 ;; -------------------------
 ;; INPUT: GAME, a scrabble struct
@@ -831,22 +810,34 @@
       (setf (scrabble-whose-turn game) *ply1*)
       (setf (scrabble-whose-turn game) *ply0*))
     game))
-(defparameter *legal-moves* nil)
 
-(defparameter *trie* (new-trie))
-(add-all-words *trie*)
+;; CLEAR-LEGAL-MOVES
+;; -------------------------
+;; INPUTS: ---
+;; OUTPUT: ---
+;; SIDE-EFFECT: Sets *LEGAL-MOVES* to NIL
 
 (defun clear-legal-moves ()
   (setf *legal-moves* nil))
 
-(defun add-legal-move (tiles locs transposed)
-  ;(format t "A valid move:~%")
+;; ADD-LEGAL-MOVE
+;; -----------------------
+;; INPUTS: TILES, a list of TILEs
+;;         LOCS, a list of locations
+;;         TRANSPOSED, t if the board is tranposed
+;; OUTPUT: ---
+;; SIDE-EFFECT: Adds the move to *LEGAL-MOVES*
+
+(defun add-legal-move! (tiles locs transposed)
   (setf tiles (word-to-string tiles))
-  ;(format t "~6T~A~%" tiles)
-  ;(format t "~6T~A~%" (if transposed (transpose-locs locs) locs))
   (setf *legal-moves* (cons (list tiles (if transposed
                                           (transpose-locs locs)
                                           locs)) *legal-moves*)))
+
+;; TRANSPOSE-LOCS
+;; --------------------------------
+;; INPUTS: LOCS, a list of locations
+;; OUTPUT: The list of locations where each location has it's row/col swapped
 
 (defun transpose-locs (locs)
   (map 'list #'(lambda (loc) (list (second loc) (first loc))) locs))
@@ -1140,7 +1131,7 @@
                         (not (null partial-word)))
                ;; if NODEY is a terminal node then
                ;; LegalMove(PartialWord)
-               (add-legal-move (append prefix partial-word) partial-locs
+               (add-legal-move! (append prefix partial-word) partial-locs
                                transposed))
              (dolist (child (get-children nodey *trie*))
                ;; If CHILD is in our rack...
