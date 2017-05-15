@@ -2,17 +2,56 @@
 ;; PLAY-SCR.LISP
 ;; ========================
 
+;;  PLAY-RANDOM-GAME
+;; -------------------
+;;  INPUTS: NONE!
+;;  OUTPUT: NIL
+;;  SIDE-EFFECT: Creates and plays a random game
+
+(defun play-random-game ()
+  (let ((gm nil))
+    (setf gm (new-scrabble))
+    (while (not (game-over? gm))
+           (format t "~A~%" gm)
+           (do-random-move! gm))
+    (format t "~A~%" gm)
+    (if (> (svref (scrabble-score gm) 0) (svref (scrabble-score gm) 1))
+      (format t "~%Player 1 WINS!~%")
+      (format t "~%Player 2 WINS!~%"))))
+
 ;;  DO-RANDOM-MOVE!
 ;; ----------------------
+;;  INPUTS: GAME, a SCRABBLE struct
+;;  OUTUPT: The modified game
+;;  SIDE-EFFECT: Modifies the game with a random legal move
 
 (defun do-random-move! (game)
+  ;(format t "~A~%" game)
   (let* ((moves (generate-moves game))
          (move (nth (random (length moves)) moves))
          (word (first move))
          (locs (second move)))
-    (do-move! g t word locs))
+    (if (null word)
+      (pass! game)
+      (do-move! game t word locs)))
   game)
 
+;;  GAME-OVER?
+;; --------------------
+;;  INPUTS: GAME, a SCRABBLE struct
+;;  OUTPUT: T if the game is over, NIL otherwise
+
+(defun game-over? (game)
+  (when (or (null (scrabble-rack_0 game))
+            (null (scrabble-rack_1 game)))
+    (return-from game-over? t))
+  (when (null (generate-moves game))
+    (pass! game)
+    (if (null (generate-moves game))
+      (return-from game-over? t)
+      ;; Reset to original player
+      (pass! game)))
+  nil)
 
 ;;  DO-MOVE!
 ;; ----------------------
@@ -25,21 +64,31 @@
 ;;               each TILE to include it's position
 
 (defun do-move! (game check-legal? word locs)
+  (format t "Doing move: (player: ~A, word: ~A, locs: ~A)~%" 
+          (if (= (whose-turn game) 0)
+            "*plyr1*"
+            "*plyr2*")
+            word locs)
   (let ((new-tiles (get-new-tiles game word locs))
         (new-locs (get-new-locs game locs)))
-    (if (or (not check-legal?)
-            (is-legal? game word locs))
-      (progn
-        (place-all-tiles! (scrabble-board game) new-tiles new-locs)
-        (refill-racks! game)
-        (format t "tiles:: ~A~%" new-tiles)
-        (let ((score (score (scrabble-board game) new-tiles)))
-          (incf (svref (scrabble-score game) (whose-turn game))
-                score)
-          (setf (scrabble-whose-turn game) (- 1 (whose-turn game)))
-          score))
-      (format t "INVALID MOVE!~%"))))
+    (when (or (not check-legal?)
+              (is-legal? game word locs))
+      (place-all-tiles! game new-tiles new-locs)
+      (refill-racks! game)
+      ;(format t "tiles:: ~A~%" new-tiles)
+      (let ((score (score (scrabble-board game) new-tiles)))
+        (incf (svref (scrabble-score game) (whose-turn game))
+              score)
+        (setf (scrabble-whose-turn game) (- 1 (whose-turn game)))
+        (return-from do-move! score)))
+    (format t "INVALID MOVE!~%")))
 
+;;  GET-NEW-LOCS
+;; --------------------------
+;;  INPUTS: GAME, a SCRABBLE struct
+;;          LOCS, a list of locations '(row col)
+;;  OUTPUT: A LIST of locations where each location is from LOCS but not
+;;          on the board of GAME
 
 (defun get-new-locs (game locs)
   (get-new-locs-acc game locs nil))
@@ -53,6 +102,13 @@
                            (append acc (list (first locs)))))
         (t (get-new-locs-acc game (rest locs) acc))))
 
+;;  GET-NEW-TILES
+;; ----------------------------
+;;  INPUTS: GAME, a SCRABBLE struct
+;;          WORD, a list of TILES
+;;          LOCS, a list of locations '(row col) where we are thinking about
+;;                placing WORD
+;;  OUTPUT: A list of tiles from WORD which are not already on the board
 
 (defun get-new-tiles (game word locs)
   (get-new-tiles-acc game (coerce word 'list) locs nil))
@@ -62,6 +118,7 @@
         ((empty-space? (scrabble-board game)
                        (first (first locs))
                        (second (first locs)))
+         ;(format t "empty-space~%")
          (get-new-tiles-acc game (rest word) (rest locs)
                             (append acc (list (get-from-rack game
                                                               (first word))))))
@@ -76,15 +133,17 @@
 ;;  OUTPUTS: The modified board
 ;;  SIDE-EFFECT: Modifies BOARD with TILEs at LOCS
 
-(defun place-all-tiles! (board tiles locs)
-  (cond ((null tiles) board)
-        (t (when (empty-space? board (first (first locs)) (second (first locs)))
-             (place-tile! board
-                          (first tiles)
-                          (first (first locs))
-                          (second (first locs)))
-             (remove-from-rack! g (first tiles)))
-           (place-all-tiles! board (rest tiles) (rest locs)))))
+(defun place-all-tiles! (game tiles locs)
+  (let ((board (scrabble-board game)))
+    (cond ((null tiles) board)
+          (t (when (empty-space? board
+                                 (first (first locs)) (second (first locs)))
+               (place-tile! board
+                            (first tiles)
+                            (first (first locs))
+                            (second (first locs)))
+               (remove-from-rack! game (first tiles)))
+             (place-all-tiles! game (rest tiles) (rest locs))))))
 
 ;;  IS-LEGAL?
 ;; ---------------------------
@@ -123,12 +182,6 @@
       nil
       t)))
 
-;; Some Tests
-;; (is-word? (list
-;;   (make-tile :letter #\A :row 0 :col 0)
-;;   (make-tile :letter #\A :row 1 :col 0)
-;;   (make-tile :letter #\H :row 2 :col 0)))
-
 ;;  EMPTY-BOARD?
 ;; ---------------------
 ;;  INPUTS: BOARD, a 2D array representing a scrabble board
@@ -156,13 +209,6 @@
                    (char-equal #\- (aref word2 n))))
       (return-from word-equal? nil)))
   t)
-
-;; Some Tests
-;; (word-equal? "" "")
-;; (word-equal? "abcde" "abcde")
-;; (word-equal? "abcde" "abcdd")
-;; (word-equal? "abcde" "abcd")
-;; (word-equal? "abcde" "ab-de")
 
 ;;  SCORE
 ;; ------------------------
@@ -199,8 +245,7 @@
 ;;  OUTPUT: The score for the given word
 
 (defun score-word (board word)
-  (when *debugging*
-    (format t "score for ~A:~A ~%" word (score-word-acc board word 0)))
+  (format t "score for ~A:~A ~%" word (score-word-acc board word 0))
   (score-word-acc board word 0))
 
 (defun score-word-acc (board word score)
@@ -488,22 +533,18 @@
 ;;  SIDE-EFFECT: Modifies the appropriate rack in GAME
 
 (defun pick-tiles! (game player n)
-  (setf (scrabble-num-tiles-left game)
-    (- (scrabble-num-tiles-left game) n))
-  (dotimes (i n)
-    (if (equal player *ply0*)
-      ;; Player 0
-      (setf (scrabble-rack_0 game)
-            (cons (first (scrabble-bag game))
-                  (scrabble-rack_0 game)))
-      ;; Player 1
-      (setf (scrabble-rack_1 game)
-            (cons (first (scrabble-bag game))
-                  (scrabble-rack_1 game))))
-    ;; Remove tile from bag
-    (setf (scrabble-bag game)
-          (rest (scrabble-bag game)))))
-
+  (cond ((<= n 0) game)
+        ((null (scrabble-bag game)) game)
+        (t (decf (scrabble-num-tiles-left game))
+           (if (equal player *ply0*)
+             (setf (scrabble-rack_0 game)
+                   (cons (first (scrabble-bag game))
+                         (scrabble-rack_0 game)))
+             (setf (scrabble-rack_1 game)
+                   (cons (first (scrabble-bag game))
+                         (scrabble-rack_1 game))))
+           (setf (scrabble-bag game) (rest (scrabble-bag game)))
+           (pick-tiles! game player (1- n)))))
 
 ;; TRADE-IN!
 ;; ---------------------
@@ -557,6 +598,7 @@
 ;; SIDE EFFECT: Switch turn
 
 (defun pass! (game)
+  (format t "---PASSING ~A~%" (whose-turn game))
   (let ((player (whose-turn game)))
     (if (equal player *ply0*)
 	(setf (scrabble-whose-turn game) *ply1*)

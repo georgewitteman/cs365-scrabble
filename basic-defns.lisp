@@ -225,14 +225,16 @@
 
     (format str "Rack: ")
     (dolist (tile (scrabble-rack_0 game))
-      (if (equal *ply0* p)
-        (print-tile tile str d)
-        (format str "- ")))
+      (format str "~A" tile))
+      ;(if (equal *ply0* p)
+        ;(print-tile tile str d)
+        ;(format str "- ")))
     (format str "~25TRack: ")
     (dolist (tile (scrabble-rack_1 game))
-      (if (equal *ply1* p)
-        (print-tile tile str d)
-        (format str "- ")))
+      (format str "~A" tile))
+      ;(if (equal *ply1* p)
+        ;(print-tile tile str d)
+        ;(format str "- ")))
     (format str "~55T~A" (scrabble-num-tiles-left game))
 
     (format str "~%Score: ~A~25TScore: ~A"
