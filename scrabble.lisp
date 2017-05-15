@@ -1199,16 +1199,18 @@
           (setf best-score score))))
     best-move))
 
-;; DO-BEST-MOVE!
-;; ------------------------
-;; INPUT: GAME, a Scrabble struct
-;; OUTPUT: GAME modified so that best move is played
+;; BEST-VS-BEST
+;; -------------------------
 
-
-(defun do-best-move! (game)
-  (let ((movie (find-best-move game)))
-    (do-move! game nil (first movie) (second movie))))
-
+(defun best-vs-best ()
+  (let ((gm (new-scrabble)))
+    (while (not (game-over? gm))
+           (format t "~A~%" gm)
+           (do-best-move! gm))
+    (format t "~A~%" gm)
+    (if (> (svref (scrabble-score gm) 0) (svref (scrabble-score gm) 1))
+      (format t "~%Player 1 WINS!~%")
+      (format t "~%Player 2 WINS!~%"))))
 
 ;;  RANDOM-VS-BEST
 ;; ----------------------
@@ -1225,13 +1227,25 @@
       (format t "~%Player 1 WINS!~%")
       (format t "~%Player 2 WINS!~%"))))
 
-;;  PLAY-RANDOM-GAME
+(defun best-vs-random ()
+  (let ((gm (new-scrabble)))
+    (while (not (game-over? gm))
+           (format t "~A~%" gm)
+           (if (= (whose-turn gm) 0)
+             (do-best-move! gm)
+             (do-random-move! gm)))
+    (format t "~A~%" gm)
+    (if (> (svref (scrabble-score gm) 0) (svref (scrabble-score gm) 1))
+      (format t "~%Player 1 WINS!~%")
+      (format t "~%Player 2 WINS!~%"))))
+
+;;  RANDOM-VS-RANDOM
 ;; -------------------
 ;;  INPUTS: NONE!
 ;;  OUTPUT: NIL
 ;;  SIDE-EFFECT: Creates and plays a random game
 
-(defun play-random-game ()
+(defun random-vs-random ()
   (let ((gm (new-scrabble)))
     (while (not (game-over? gm))
            (format t "~A~%" gm)
@@ -1240,6 +1254,17 @@
     (if (> (svref (scrabble-score gm) 0) (svref (scrabble-score gm) 1))
       (format t "~%Player 1 WINS!~%")
       (format t "~%Player 2 WINS!~%"))))
+
+;; DO-BEST-MOVE!
+;; ------------------------
+;; INPUT: GAME, a Scrabble struct
+;; OUTPUT: GAME modified so that best move is played
+
+(defun do-best-move! (game)
+  (let ((movie (find-best-move game)))
+    (format t "~%Best Move: ~A @ ~A~%" (first movie) (first (second movie)))
+    (do-move! game nil (first movie) (second movie))))
+
 
 ;;  DO-RANDOM-MOVE!
 ;; ----------------------
@@ -1253,6 +1278,7 @@
          (move (nth (random (length moves)) moves))
          (word (first move))
          (locs (second move)))
+    (format t "~%Random Move: ~A @ ~A~%" word (first locs))
     (if (null word)
       (pass! game)
       (do-move! game t word locs)))
