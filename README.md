@@ -38,16 +38,6 @@ You can also have the computer play games entirely on it's own. There are 3 func
   
 The files `random-vs-best.txt`, `random-vs-random.txt`, and `best-vs-best.txt` show examples of the output for these functions.
 
-## The Algorithm for Move Generation
-
-To generate all legal scrabble moves we implemented Appel and Jacobson algorithm for move generation as described in the paper below. The general outline of the algorithm is as follows:
-
-  1. Compute cross-check sets. A cross-check set for a given space is the legal tiles that can be placed in that space. For example, the cross-check sets for all spaces on an empty board are all letters, and the set for a tile to the right of an 'a' would contain all letters - such that there exists a word with "a-" in that word.
-  2. Compute anchor squares. Anchor squares are all squares that are adjacent to a tile already placed on the board.
-  3. For each anchor square find all possible left-parts. A left part can either be empty, tiles already on the board, or the start of a word in the dictionary.
-  4. For each left-part, generate all possible right parts of a word.
-  5. Append left-part and right-part, and if they create a word then add it to the list of legal moves.
-  
 ## Trie Data Structure
 
 This algorithm makes heavy use of the *trie* structure to efficiently generate left and right-parts of words. A trie is simply a tree whose edges are labeled by letters. If the nodes from the root node to a given node create a valid word, `is-word` gets marked as `t`. A more detailed description of the *trie* is given in the Appel and Jacobson paper.
