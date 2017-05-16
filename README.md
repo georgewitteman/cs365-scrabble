@@ -20,6 +20,13 @@ You can also use the functions `find-best-move` to find the move with the highes
 
     (trade-in! g ‘(0 2))
     
+The following functions are also available to do the best move:
+
+  - `(find-best-move g)`: Output the best move
+  - `(do-best-move! g)`: Modifies the game `g` with the best move.
+  
+If you want to play against the computer you can manually do a move for yourself, and then immediately run `(do-best-move! g)` for player 2.
+    
 ### Algorithm vs. Algorithm
 
 You can also have the computer play games entirely on it's own. There are 3 functions to do this:
